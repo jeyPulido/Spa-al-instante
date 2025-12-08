@@ -1,0 +1,118 @@
+/* ============================================================
+   ESTILO PREMIUM SPA
+   ============================================================ */
+
+/* COLORES PRINCIPALES */
+$primary: #7d8f6b; // Verde Salvia
+$secondary: #f5f3ef; // Beige cálido
+$accent: #ffffff; // Blanco limpio
+$dark: #2e2e2e; // Texto
+$light-shadow: rgba(0, 0, 0, 0.08);
+
+/* ============================================================
+   SECCIONES
+   ============================================================ */
+
+.section {
+  padding: 90px 20px;
+}
+
+.section-title {
+  text-align: center;
+  font-size: 36px;
+  font-weight: 700;
+  color: $primary;
+  margin-bottom: 60px;
+  position: relative;
+}
+
+.section-title::after {
+  content: '';
+  width: 70px;
+  height: 4px;
+  background: $primary;
+  display: block;
+  margin: 12px auto 0;
+  border-radius: 4px;
+}
+
+/* ============================================================
+   TARJETAS SERVICIOS (ICON + TEXTO)
+   ============================================================ */
+
+.servicios-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 40px; /* ====> SEPARACIÓN REAL ENTRE TARJETAS */
+  justify-items: center;
+}
+
+.my-card {
+  width: 100%;
+  max-width: 340px; /* controla que no se estiren demasiado */
+  background: #ffffff;
+  border-radius: 22px;
+  padding: 25px 20px;
+  text-align: center;
+
+  box-shadow: 0 6px 18px $light-shadow;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+
+  &:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.12);
+  }
+}
+
+/* ============================================================
+   PAQUETES (CON IMAGEN)
+   ============================================================ */
+
+.paquetes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 45px; /* ====> MÁS ESPACIO POR EL TAMAÑO DE LAS IMÁGENES */
+  justify-items: center;
+}
+
+.my-card .q-img {
+  height: 190px !important;
+  width: 100%;
+  object-fit: cover;
+  border-radius: 16px 16px 0 0;
+  overflow: hidden;
+}
+
+/* ============================================================
+   FORMULARIO
+   ============================================================ */
+.contact-form {
+  max-width: 550px;
+  margin: auto;
+  padding: 20px 10px;
+}
+
+/* ============================================================
+   HERO SECTION
+   ============================================================ */
+
+.hero-section {
+  height: 75vh;
+  background: url('/statics/images.jpg') center/cover no-repeat;
+  position: relative;
+  text-align: center;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+  }
+
+  > * {
+    position: relative;
+    z-index: 2;
+  }
+}
