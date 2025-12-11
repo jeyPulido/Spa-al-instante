@@ -223,7 +223,7 @@ onMounted(() => {
 <style scoped>
 .hero-section {
   height: 70vh;
-  background: url('/statics/spa-bg.jpg') center/cover no-repeat;
+  background: url('/statics/images.jpg') center/cover no-repeat;
 }
 .section {
   padding: 40px 20px;
