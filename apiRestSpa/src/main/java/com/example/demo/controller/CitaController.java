@@ -1,5 +1,7 @@
 package com.example.demo.controller;
 
+import com.example.demo.dto.CitaRequest;
+import com.example.demo.dto.HorarioDTO;
 import com.example.demo.entity.Cita;
 import com.example.demo.entity.Servicio;
 import com.example.demo.repository.ServicioRepository;
@@ -27,13 +29,18 @@ public class CitaController {
         return servicioRepository.findAll();
     }
 
+    // ✅ HORARIOS CON DISPONIBILIDAD
     @GetMapping("/horarios-disponibles")
-    public List<String> obtenerHorarios(@RequestParam String fecha) {
-        LocalDate f = LocalDate.parse(fecha);
+    public List<HorarioDTO> obtenerHorarios(@RequestParam String fecha) {
+        return citaService.obtenerHorariosDisponibles(LocalDate.parse(fecha));
+    }
 
-        return citaService.obtenerHorariosDisponibles(f)
+    // ✅ DÍAS SATURADOS
+    @GetMapping("/dias-saturados")
+    public List<String> obtenerDiasSaturados() {
+        return citaService.obtenerDiasSaturados()
                 .stream()
-                .map(t -> t.toString().substring(0, 5))
+                .map(LocalDate::toString)
                 .toList();
     }
 
@@ -43,7 +50,12 @@ public class CitaController {
     }
 
     @PostMapping("/citas")
-    public Cita crearCita(@RequestBody Cita cita) {
-        return citaService.crearCita(cita);
+    public Cita crearCita(@RequestBody CitaRequest request) {
+        return citaService.crearCita(request);
+    }
+
+    @DeleteMapping("/citas/{id}")
+    public void cancelarCita(@PathVariable Long id) {
+        citaService.cancelarCita(id);
     }
 }
