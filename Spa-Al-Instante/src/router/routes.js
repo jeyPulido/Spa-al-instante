@@ -9,6 +9,18 @@ const routes = [
     component: () => import('layouts/MainLayout.vue'),
     children: [{ path: '/carrito', component: () => import('pages/CarritoPage.vue') }],
   },
+  {
+    path: '/admin/citas',
+    component: () => import('layouts/MainLayout.vue'),
+    children: [{ path: '/admin/citas', component: () => import('pages/admin/AdminCitas.vue') }],
+  },
+  {
+    path: '/admin/dashboard',
+    component: () => import('layouts/MainLayout.vue'),
+    children: [
+      { path: '/admin/dashboard', component: () => import('pages/admin/AdminDashboard.vue') },
+    ],
+  },
 
   // Always leave this as last one,
   // but you can also remove it
