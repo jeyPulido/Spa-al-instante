@@ -99,6 +99,15 @@ public class CitaService {
     public List<Cita> obtenerTodas() {
         return citaRepository.findAll();
     }
+    public Cita reagendarCita(Long id, String nuevaFechaHora) {
+        Cita cita = citaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
+
+        cita.setFechaHora(LocalDateTime.parse(nuevaFechaHora));
+        cita.setEstado(EstadoCita.REAGENDADA);
+
+        return citaRepository.save(cita);
+    }
 
     /* ===============================
        HISTORIAL POR USUARIO

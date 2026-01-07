@@ -10,7 +10,7 @@
     <div class="contenedor-central">
       <q-card
         v-for="(item, index) in carrito"
-        :key="index"
+        :key="item.id"
         class="servicio-card q-mb-md"
         flat
         bordered
@@ -22,7 +22,7 @@
           </div>
 
           <div class="col-3 text-right">
-            <q-btn icon="delete" color="negative" flat round @click="eliminar(index)" />
+            <q-btn icon="delete" color="negative" flat round @click="confirmarEliminar(index)" />
           </div>
         </q-card-section>
       </q-card>
@@ -90,6 +90,7 @@
           class="btn-confirmar q-mt-lg"
           unelevated
           rounded
+          :disable="!form.fecha || !form.hora"
           @click="confirmar"
         />
       </q-form>
@@ -166,7 +167,6 @@ onMounted(async () => {
     return
   }
 
-  // ✅ AUTOCOMPLETADO SI ESTÁ LOGUEADO
   if (auth.user) {
     form.value.nombre = auth.user.nombre
     form.value.apellidos = auth.user.apellidos
@@ -201,11 +201,25 @@ async function alCambiarFecha() {
     const res = await axios.get(
       `http://localhost:8082/api/horarios-disponibles?fecha=${form.value.fecha}`,
     )
-    horarios.value = res.data.map((h) => ({
-      label: h.hora,
-      value: h.hora,
-      disable: !h.disponible,
-    }))
+
+    const ahora = new Date()
+    const esHoy = form.value.fecha === ahora.toISOString().slice(0, 10)
+    const horaActualMinutos = ahora.getHours() * 60 + ahora.getMinutes()
+
+    horarios.value = res.data
+      .filter((h) => {
+        if (!esHoy) return true
+
+        const [hh, mm] = h.hora.split(':').map(Number)
+        const minutosHorario = hh * 60 + mm
+
+        return minutosHorario > horaActualMinutos
+      })
+      .map((h) => ({
+        label: h.hora,
+        value: h.hora,
+        disable: !h.disponible,
+      }))
   } finally {
     cargandoHorarios.value = false
   }
@@ -219,6 +233,7 @@ function confirmar() {
   }
   mostrarConfirmacion.value = true
 }
+
 async function enviarCita() {
   mostrarConfirmacion.value = false
 
@@ -231,24 +246,26 @@ async function enviarCita() {
     telefono: form.value.telefono,
     fechaHora,
     usuarioId: auth.user?.id || null,
-
-    // ✅ LISTA DE SERVICIOS
     serviciosIds: carrito.value.map((s) => s.id),
   })
 
-  $q.notify({
-    type: 'positive',
-    message: 'Cita registrada correctamente',
-  })
+  $q.notify({ type: 'positive', message: 'Cita registrada correctamente' })
 
   localStorage.removeItem('carrito')
   router.replace('/')
 }
 
 /* ================= ELIMINAR ================= */
-function eliminar(i) {
-  carrito.value.splice(i, 1)
-  localStorage.setItem('carrito', JSON.stringify(carrito.value))
+function confirmarEliminar(index) {
+  $q.dialog({
+    title: 'Eliminar servicio',
+    message: '¿Deseas quitar este servicio del carrito?',
+    cancel: true,
+    persistent: true,
+  }).onOk(() => {
+    carrito.value.splice(index, 1)
+    localStorage.setItem('carrito', JSON.stringify(carrito.value))
+  })
 }
 </script>
 

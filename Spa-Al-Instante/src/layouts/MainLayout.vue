@@ -9,10 +9,12 @@
         <q-toolbar-title class="text-weight-bold"> Spa al Instante </q-toolbar-title>
 
         <!-- 🖥️ MENÚ DESKTOP -->
-        <div class="gt-sm row items-center q-gutter-x-md">
+        <div v-if="auth.ready" class="gt-sm row items-center q-gutter-x-md">
+          <!-- ✅ INICIO (TODOS) -->
+          <q-btn flat label="Inicio" to="/" />
+
           <!-- 🟢 INVITADO -->
           <template v-if="isGuest">
-            <q-btn flat label="Inicio" to="/" />
             <q-btn flat label="Carrito" to="/carrito" />
             <q-btn flat label="Iniciar sesión" to="/admin/login" />
           </template>
@@ -35,18 +37,22 @@
             <q-btn flat label="Cerrar sesión" @click="logout" />
           </template>
         </div>
+        <div v-else class="row items-center q-gutter-x-md">
+          <q-spinner color="white" size="sm" />
+        </div>
       </q-toolbar>
     </q-header>
 
     <!-- 📱 DRAWER MOBILE -->
-    <q-drawer v-model="drawer" side="left" overlay bordered>
+    <q-drawer v-if="auth.ready" v-model="drawer" side="left" overlay bordered>
       <q-list padding>
+        <!-- ✅ INICIO (TODOS) -->
+        <q-item clickable to="/">
+          <q-item-section>Inicio</q-item-section>
+        </q-item>
+
         <!-- 🟢 INVITADO -->
         <template v-if="isGuest">
-          <q-item clickable to="/">
-            <q-item-section>Inicio</q-item-section>
-          </q-item>
-
           <q-item clickable to="/carrito">
             <q-item-section>Carrito</q-item-section>
           </q-item>
@@ -58,9 +64,6 @@
 
         <!-- 👤 USUARIO -->
         <template v-else-if="isUser">
-          <q-item clickable to="/">
-            <q-item-section>Inicio</q-item-section>
-          </q-item>
           <q-item clickable to="/carrito">
             <q-item-section>Carrito</q-item-section>
           </q-item>
@@ -79,11 +82,7 @@
         </template>
 
         <!-- 🛠️ ADMIN -->
-
         <template v-else-if="isAdmin">
-          <q-item clickable to="/">
-            <q-item-section>Inicio</q-item-section>
-          </q-item>
           <q-item clickable to="/perfil">
             <q-item-section>Perfil</q-item-section>
           </q-item>
@@ -111,7 +110,7 @@
       </q-list>
     </q-drawer>
 
-    <!-- CONT_toggleENT -->
+    <!-- CONTENIDO -->
     <q-page-container>
       <router-view />
     </q-page-container>
@@ -123,13 +122,13 @@ import { ref, computed } from 'vue'
 import { useAuthStore } from 'stores/auth'
 import { useRouter } from 'vue-router'
 
-const auth = useAuthStore()
 const router = useRouter()
 const drawer = ref(false)
+const auth = useAuthStore()
 
-const isGuest = computed(() => !auth.token)
-const isUser = computed(() => auth.user?.rol === 'CLIENTE')
-const isAdmin = computed(() => auth.user?.rol === 'ADMIN')
+const isGuest = computed(() => auth.ready && !auth.token)
+const isUser = computed(() => auth.ready && auth.user?.rol === 'CLIENTE')
+const isAdmin = computed(() => auth.ready && auth.user?.rol === 'ADMIN')
 
 function logout() {
   auth.logout()

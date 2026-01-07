@@ -45,8 +45,13 @@ public class AuthService {
         u.setCorreo(request.correo);
         u.setTelefono(request.telefono);
         u.setPassword(encoder.encode(request.password));
-        u.setRol(Rol.CLIENTE);
+
+        // 👑 Si viene rol → úsalo, si no → CLIENTE
+        u.setRol(request.rol != null ? request.rol : Rol.CLIENTE);
 
         usuarioRepository.save(u);
     }
+
+
+
 }

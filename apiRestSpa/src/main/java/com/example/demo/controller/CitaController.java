@@ -65,5 +65,12 @@ public class CitaController {
     public List<Cita> obtenerCitasPorUsuario(@PathVariable Long id) {
         return citaService.obtenerCitasPorUsuario(id);
     }
+    @PatchMapping("/citas/{id}/reagendar")
+    public Cita reagendarCita(
+            @PathVariable Long id,
+            @RequestParam String nuevaFechaHora
+    ) {
+        return citaService.reagendarCita(id, nuevaFechaHora);
+    }
 
 }

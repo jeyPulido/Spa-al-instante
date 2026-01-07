@@ -1,37 +1,117 @@
 <template>
-  <q-page class="flex flex-center">
-    <q-card class="q-pa-lg" style="width: 350px">
-      <q-card-section>
-        <p class="text-h6 text-center">Iniciar Sesión</p>
-      </q-card-section>
+  <q-page class="flex flex-center bg-grey-2">
+    <q-card class="login-card q-pa-lg">
+      <!-- LOGO / TITULO -->
+      <div class="text-center q-mb-md">
+        <q-avatar size="80px" color="primary" text-color="white">
+          <q-icon name="spa" size="40px" />
+        </q-avatar>
+        <div class="text-h6 q-mt-sm">Spa al Instante</div>
+        <div class="text-caption text-grey">Iniciar sesión</div>
+      </div>
 
-      <q-input v-model="correo" label="Correo" filled />
-      <q-input v-model="password" label="Contraseña" type="password" filled />
+      <!-- FORM -->
+      <q-input
+        outlined
+        dense
+        v-model="correo"
+        label="Correo"
+        prepend-icon="email"
+        @keyup.enter="login"
+      />
 
-      <q-btn label="Entrar" color="primary" class="full-width q-mt-md" @click="login" />
-      <q-btn flat label="Registrarme" to="/registro" class="full-width q-mt-sm" />
+      <q-input
+        outlined
+        dense
+        v-model="password"
+        label="Contraseña"
+        type="password"
+        prepend-icon="lock"
+        class="q-mt-sm"
+        @keyup.enter="login"
+      />
+
+      <!-- BOTONES -->
+      <q-btn
+        label="Entrar"
+        color="primary"
+        class="full-width q-mt-lg"
+        :loading="loading"
+        icon="login"
+        @click="login"
+      />
+
+      <q-btn flat label="Crear cuenta" to="/admin/register" class="full-width q-mt-sm" />
     </q-card>
   </q-page>
 </template>
-
 <script setup>
 import axios from 'axios'
 import { ref } from 'vue'
 import { useAuthStore } from 'src/stores/auth'
 import { useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
 
 const correo = ref('')
 const password = ref('')
+const loading = ref(false)
+
 const auth = useAuthStore()
 const router = useRouter()
+const $q = useQuasar()
 
 async function login() {
-  const res = await axios.post('http://localhost:8082/api/auth/login', {
-    correo: correo.value,
-    password: password.value,
-  })
+  if (!correo.value || !password.value) {
+    $q.notify({
+      type: 'warning',
+      message: 'Ingresa correo y contraseña',
+    })
+    return
+  }
 
-  auth.login(res.data.token)
-  router.push(auth.user.rol === 'ADMIN' ? '/admin' : '/')
+  loading.value = true
+
+  try {
+    const res = await axios.post('http://localhost:8082/api/auth/login', {
+      correo: correo.value,
+      password: password.value,
+    })
+
+    auth.login(res.data.token)
+
+    $q.notify({
+      type: 'positive',
+      message: 'Sesión iniciada correctamente',
+    })
+
+    router.push(auth.user.rol === 'ADMIN' ? '/' : '/')
+  } catch (error) {
+    if (error.response?.status === 404) {
+      $q.notify({
+        type: 'negative',
+        message: 'Usuario no registrado',
+      })
+    } else if (error.response?.status === 401) {
+      $q.notify({
+        type: 'negative',
+        message: 'Contraseña incorrecta',
+      })
+    } else {
+      $q.notify({
+        type: 'negative',
+        message: 'Error al iniciar sesión',
+      })
+    }
+  } finally {
+    loading.value = false
+  }
 }
 </script>
+<style scoped>
+.login-card {
+  width: 100%;
+  max-width: 360px;
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+</style>

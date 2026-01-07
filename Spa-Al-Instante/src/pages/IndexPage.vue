@@ -4,12 +4,13 @@
     <q-page-sticky position="bottom-right" :offset="[18, 18]" class="carrito-flotante">
       <q-btn
         fab
+        glossy
         color="primary"
         icon="shopping_cart"
-        :disable="carrito.length === 0"
+        :disable="totalItems === 0"
         @click="irCarrito"
       >
-        <q-badge v-if="carrito.length > 0" color="red" floating :label="carrito.length" />
+        <q-badge v-if="totalItems > 0" color="red" floating :label="totalItems" />
       </q-btn>
     </q-page-sticky>
 
@@ -17,7 +18,7 @@
     <section class="hero-section">
       <div class="overlay"></div>
       <div class="hero-content text-center text-white">
-        <img src="/statics/logo-spa.png" class="logo" />
+        <img src="/statics/logo-spa.png" class="logo" alt="Logo Spa al Instante" />
         <p class="text-h3 text-weight-bold q-mt-md">Spa al Instante</p>
         <p class="text-subtitle1 q-mt-sm">Relájate, renueva tu energía y déjate consentir</p>
       </div>
@@ -34,6 +35,7 @@
             <p class="text-h6 q-mt-md">{{ s.nombre }}</p>
             <p class="text-body2">{{ s.descripcion }}</p>
             <p class="text-subtitle2 text-weight-bold q-mt-sm">$ {{ s.precio }} MXN</p>
+
             <q-btn
               color="primary"
               label="Agregar al carrito"
@@ -45,7 +47,7 @@
       </div>
     </section>
 
-    <!-- 🕒 HORARIOS PROFESIONALES -->
+    <!-- 🕒 HORARIOS -->
     <section class="section horarios-section">
       <p class="section-title">Horarios de Atención</p>
 
@@ -81,12 +83,12 @@
       <p class="section-title">Nuestro Spa</p>
 
       <div class="galeria-grid">
-        <img src="/statics/spa/spa1.jpg" />
-        <img src="/statics/spa/spa2.jpg" />
-        <img src="/statics/spa/spa3.jpg" />
-        <img src="/statics/spa/spa4.jpg" />
-        <img src="/statics/spa/spa5.jpg" />
-        <img src="/statics/spa/spa6.jpg" />
+        <img src="/statics/spa/spa1.jpg" loading="lazy" alt="Spa 1" />
+        <img src="/statics/spa/spa2.jpg" loading="lazy" alt="Spa 2" />
+        <img src="/statics/spa/spa3.jpg" loading="lazy" alt="Spa 3" />
+        <img src="/statics/spa/spa4.jpg" loading="lazy" alt="Spa 4" />
+        <img src="/statics/spa/spa5.jpg" loading="lazy" alt="Spa 5" />
+        <img src="/statics/spa/spa6.jpg" loading="lazy" alt="Spa 6" />
       </div>
     </section>
 
@@ -96,12 +98,13 @@
 
       <div class="mapa-container">
         <iframe
-          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3757.5483432745373!2d-99.23297642660069!3d19.64659799334239!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x85d21e5c07387a6f%3A0xd7735472495ee4aa!2sTesci%20-%20Tecnol%C3%B3gico%20de%20Estudios%20Superiores%20de%20Cuautitl%C3%A1n%20Izcalli!5e0!3m2!1ses-419!2sus!4v1767628031141!5m2!1ses-419!2sus"
-          width="100%"
-          height="350"
+          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3757.548460610946!2d-99.23093792478016!3d19.64659298167911!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x85d21e5c07387a6f%3A0xd7735472495ee4aa!2sTesci%20-%20Tecnol%C3%B3gico%20de%20Estudios%20Superiores%20de%20Cuautitl%C3%A1n%20Izcalli!5e0!3m2!1ses!2smx!4v1767822428596!5m2!1ses!2smx"
+          width="1200"
+          height="450"
           style="border: 0"
-          allowfullscreen
+          allowfullscreen=""
           loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"
         ></iframe>
       </div>
     </section>
@@ -115,10 +118,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useQuasar } from 'quasar'
-import axios from 'axios'
 import { useRouter } from 'vue-router'
+import { api } from 'boot/axios'
 
 const $q = useQuasar()
 const router = useRouter()
@@ -126,9 +129,18 @@ const router = useRouter()
 const servicios = ref([])
 const carrito = ref([])
 
+const totalItems = computed(() => carrito.value.reduce((sum, item) => sum + item.cantidad, 0))
+
 async function cargarServicios() {
-  const res = await axios.get('http://localhost:8082/api/servicios')
-  servicios.value = res.data
+  try {
+    const res = await api.get('/api/servicios')
+    servicios.value = res.data
+  } catch {
+    $q.notify({
+      type: 'negative',
+      message: 'Error al cargar los servicios',
+    })
+  }
 }
 
 function cargarCarritoLocal() {
@@ -141,8 +153,19 @@ function guardarCarrito() {
 }
 
 function agregarCarrito(servicio) {
-  carrito.value.push(servicio)
+  const existe = carrito.value.some((s) => s.id === servicio.id)
+
+  if (existe) {
+    $q.notify({
+      type: 'warning',
+      message: 'Este servicio ya está en el carrito',
+    })
+    return
+  }
+
+  carrito.value.push({ ...servicio, cantidad: 1 })
   guardarCarrito()
+
   $q.notify({
     type: 'positive',
     message: `${servicio.nombre} agregado al carrito`,
@@ -150,7 +173,7 @@ function agregarCarrito(servicio) {
 }
 
 function irCarrito() {
-  if (carrito.value.length === 0) {
+  if (totalItems.value === 0) {
     $q.notify({
       type: 'info',
       message: 'Tu carrito está vacío',
@@ -191,24 +214,7 @@ onMounted(() => {
   width: 120px;
 }
 
-/* INFO */
-.info-bar {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  padding: 30px 15px;
-  flex-wrap: wrap;
-}
-
-.info-card {
-  display: flex;
-  gap: 15px;
-  padding: 20px;
-  border-radius: 14px;
-  min-width: 260px;
-}
-
-/* SERVICIOS */
+/* SECCIONES */
 .section {
   padding: 40px 20px;
 }
@@ -220,6 +226,7 @@ onMounted(() => {
   margin-bottom: 25px;
 }
 
+/* SERVICIOS */
 .servicios-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -228,6 +235,14 @@ onMounted(() => {
 
 .my-card {
   border-radius: 16px;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.my-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.12);
 }
 
 /* HORARIOS */
@@ -296,6 +311,7 @@ onMounted(() => {
   padding: 20px;
 }
 
+/* CARRITO */
 .carrito-flotante {
   z-index: 9999;
 }

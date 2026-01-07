@@ -1,18 +1,42 @@
 <template>
-  <q-page class="q-pa-md bg-grey-2">
-    <q-card class="q-pa-lg q-mb-md">
-      <p class="text-h6">➕ Registrar / Editar Servicio</p>
+  <q-page class="q-pa-lg bg-grey-2">
+    <!-- HEADER -->
+    <q-card class="q-pa-md q-mb-lg bg-primary text-white">
+      <div class="row items-center justify-between">
+        <div class="row items-center">
+          <q-icon name="spa" size="36px" />
+          <div class="text-h5 text-weight-bold q-ml-sm">Administración de Servicios</div>
+        </div>
+      </div>
+    </q-card>
 
-      <q-form @submit.prevent="guardarServicio">
+    <!-- FORMULARIO -->
+    <q-card class="q-pa-lg q-mb-lg">
+      <div class="row items-center q-mb-md">
+        <q-icon :name="editando ? 'edit' : 'add_circle'" size="28px" color="primary" />
+        <div class="text-h6 text-weight-bold q-ml-sm">
+          {{ editando ? 'Editar servicio' : 'Registrar nuevo servicio' }}
+        </div>
+      </div>
+
+      <q-form @submit.prevent="guardarServicio" class="q-gutter-md">
         <q-input
           filled
           v-model="form.nombre"
           label="Nombre del servicio"
           lazy-rules
           :rules="[(v) => !!v || 'Campo requerido']"
-        />
+        >
+          <template #prepend>
+            <q-icon name="label" />
+          </template>
+        </q-input>
 
-        <q-input filled v-model="form.descripcion" label="Descripción" type="textarea" />
+        <q-input filled v-model="form.descripcion" label="Descripción" type="textarea" autogrow>
+          <template #prepend>
+            <q-icon name="description" />
+          </template>
+        </q-input>
 
         <q-input
           filled
@@ -21,37 +45,68 @@
           type="number"
           prefix="$"
           :rules="[(v) => v > 0 || 'Precio inválido']"
-        />
+        >
+          <template #prepend>
+            <q-icon name="payments" />
+          </template>
+        </q-input>
 
         <div class="row q-gutter-sm q-mt-md">
-          <q-btn type="submit" color="primary" :label="editando ? 'Actualizar' : 'Guardar'" />
-          <q-btn v-if="editando" flat color="negative" label="Cancelar" @click="resetForm" />
+          <q-btn
+            type="submit"
+            color="primary"
+            icon="save"
+            :label="editando ? 'Actualizar servicio' : 'Guardar servicio'"
+          />
+
+          <q-btn
+            v-if="editando"
+            flat
+            color="negative"
+            icon="close"
+            label="Cancelar edición"
+            @click="resetForm"
+          />
         </div>
       </q-form>
     </q-card>
 
-    <!-- LISTA -->
+    <!-- LISTA DE SERVICIOS -->
     <q-card class="q-pa-md">
-      <p class="text-h6">📋 Servicios Registrados</p>
+      <div class="row items-center q-mb-md">
+        <q-icon name="list_alt" size="28px" color="primary" />
+        <div class="text-h6 text-weight-bold q-ml-sm">Servicios registrados</div>
+      </div>
 
-      <q-list bordered separator>
-        <q-item v-for="s in servicios" :key="s.id">
+      <q-list bordered separator v-if="servicios.length">
+        <q-item v-for="s in servicios" :key="s.id" clickable>
           <q-item-section>
-            <q-item-label class="text-weight-bold">{{ s.nombre }}</q-item-label>
-            <q-item-label caption>{{ s.descripcion }}</q-item-label>
-            <q-item-label caption>$ {{ s.precio }} MXN</q-item-label>
+            <q-item-label class="text-weight-bold text-primary">
+              {{ s.nombre }}
+            </q-item-label>
+
+            <q-item-label caption class="q-mt-xs">
+              {{ s.descripcion || 'Sin descripción' }}
+            </q-item-label>
+
+            <q-item-label class="q-mt-xs text-weight-medium">
+              💰 {{ formatoPrecio(s.precio) }}
+            </q-item-label>
           </q-item-section>
 
           <q-item-section side>
-            <q-btn icon="edit" flat color="primary" @click="editarServicio(s)" />
-            <q-btn icon="delete" flat color="negative" @click="eliminarServicio(s.id)" />
+            <div class="row q-gutter-xs">
+              <q-btn round dense icon="edit" color="primary" @click="editarServicio(s)" />
+              <q-btn round dense icon="delete" color="negative" @click="eliminarServicio(s.id)" />
+            </div>
           </q-item-section>
         </q-item>
       </q-list>
+
+      <div v-else class="text-center text-grey q-pa-md">No hay servicios registrados</div>
     </q-card>
   </q-page>
 </template>
-
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
@@ -79,10 +134,10 @@ async function guardarServicio() {
   try {
     if (editando.value) {
       await axios.put(`http://localhost:8082/api/servicios/${form.value.id}`, form.value)
-      $q.notify({ type: 'positive', message: 'Servicio actualizado' })
+      $q.notify({ type: 'positive', message: 'Servicio actualizado correctamente' })
     } else {
       await axios.post('http://localhost:8082/api/servicios', form.value)
-      $q.notify({ type: 'positive', message: 'Servicio registrado' })
+      $q.notify({ type: 'positive', message: 'Servicio registrado correctamente' })
     }
 
     resetForm()
@@ -95,12 +150,17 @@ async function guardarServicio() {
 function editarServicio(servicio) {
   form.value = { ...servicio }
   editando.value = true
+
+  $q.notify({
+    type: 'info',
+    message: 'Editando servicio',
+  })
 }
 
 async function eliminarServicio(id) {
   $q.dialog({
-    title: 'Confirmar',
-    message: '¿Eliminar este servicio?',
+    title: 'Eliminar servicio',
+    message: '¿Seguro que deseas eliminar este servicio?',
     cancel: true,
     persistent: true,
   }).onOk(async () => {
@@ -118,6 +178,11 @@ function resetForm() {
     precio: null,
   }
   editando.value = false
+}
+
+/* ================= HELPERS ================= */
+function formatoPrecio(precio) {
+  return `$${Number(precio).toLocaleString('es-MX')} MXN`
 }
 
 onMounted(cargarServicios)

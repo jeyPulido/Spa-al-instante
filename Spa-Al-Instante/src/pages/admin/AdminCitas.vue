@@ -1,14 +1,32 @@
 <template>
   <q-page class="q-pa-lg bg-grey-2">
     <!-- HEADER -->
-    <div class="row items-center q-mb-md">
-      <q-icon name="admin_panel_settings" size="32px" color="primary" />
-      <div class="text-h5 text-weight-bold q-ml-sm">Administración de Citas</div>
+    <q-card class="q-pa-md q-mb-lg bg-primary text-white">
+      <div class="row items-center justify-between">
+        <div class="row items-center">
+          <q-icon name="admin_panel_settings" size="36px" />
+          <div class="text-h5 text-weight-bold q-ml-sm">Administración de Citas</div>
+        </div>
+
+        <q-btn flat icon="refresh" label="Recargar" @click="cargarCitas" />
+      </div>
+    </q-card>
+
+    <!-- KPIs -->
+    <div class="row q-col-gutter-md q-mb-lg">
+      <q-card class="col bg-white q-pa-md" v-for="kpi in kpis" :key="kpi.label">
+        <div class="row items-center justify-between">
+          <div>
+            <div class="text-subtitle2 text-grey-7">{{ kpi.label }}</div>
+            <div class="text-h5 text-weight-bold">{{ kpi.value }}</div>
+          </div>
+          <q-icon :name="kpi.icon" size="32px" :color="kpi.color" />
+        </div>
+      </q-card>
     </div>
 
     <!-- FILTROS -->
     <q-card class="q-pa-md q-mb-md">
-      <!-- TABS DE ESTADO -->
       <q-tabs
         v-model="estadoFiltro"
         dense
@@ -24,20 +42,23 @@
         <q-tab name="REAGENDADA" label="Reagendadas" />
       </q-tabs>
 
-      <!-- BUSCADOR -->
-      <q-input
-        v-model="busqueda"
-        dense
-        outlined
-        debounce="300"
-        placeholder="Buscar por correo o teléfono"
-        class="q-mt-md"
-        clearable
-      >
-        <template #prepend>
-          <q-icon name="search" />
-        </template>
-      </q-input>
+      <div class="row q-col-gutter-md q-mt-md">
+        <q-input
+          v-model="busqueda"
+          dense
+          outlined
+          debounce="300"
+          placeholder="Buscar por correo o teléfono"
+          class="col"
+          clearable
+        >
+          <template #prepend>
+            <q-icon name="search" />
+          </template>
+        </q-input>
+
+        <q-btn outline icon="filter_alt_off" label="Limpiar filtros" @click="limpiarFiltros" />
+      </div>
     </q-card>
 
     <!-- TABLA -->
@@ -45,14 +66,13 @@
       <q-table
         flat
         bordered
-        separator="cell"
+        separator="horizontal"
         :rows="citasFiltradas"
         :columns="columns"
         row-key="id"
         :loading="loading"
-        rows-per-page-label="Citas por página"
       >
-        <!-- FECHA Y HORA -->
+        <!-- FECHA -->
         <template v-slot:body-cell-fechaHora="props">
           <div class="text-weight-medium">
             {{ formatearFecha(props.row.fechaHora) }}
@@ -61,42 +81,44 @@
 
         <!-- SERVICIOS -->
         <template v-slot:body-cell-servicios="props">
-          <div class="row q-gutter-xs">
-            <q-chip v-for="s in props.row.servicios" :key="s.id" dense outline color="primary">
-              {{ s.nombre }}
-            </q-chip>
-          </div>
+          <q-chip
+            v-for="s in props.row.servicios"
+            :key="s.id"
+            dense
+            outline
+            color="primary"
+            class="q-mr-xs"
+          >
+            {{ s.nombre }}
+          </q-chip>
         </template>
 
         <!-- ESTADO -->
         <template v-slot:body-cell-estado="props">
-          <div class="column items-center q-gutter-xs">
-            <q-chip dense square text-color="white" :color="colorEstado(props.row.estado)">
-              {{ props.row.estado }}
-            </q-chip>
-
-            <q-select
-              dense
-              outlined
-              emit-value
-              map-options
-              :options="estados"
-              v-model="props.row.estado"
-              @update:model-value="cambiarEstado(props.row)"
-              style="min-width: 140px"
-            />
-          </div>
+          <q-select
+            dense
+            outlined
+            emit-value
+            map-options
+            :options="estados"
+            v-model="props.row.estado"
+            @update:model-value="cambiarEstado(props.row)"
+            style="min-width: 140px"
+          >
+            <template #prepend>
+              <q-icon name="circle" :color="colorEstado(props.row.estado)" />
+            </template>
+          </q-select>
         </template>
 
         <!-- ACCIONES -->
-        <template v-slot:body-cell-acciones>
-          <span class="text-grey-5">—</span>
+        <template v-slot:body-cell-acciones="props">
+          <q-btn flat dense round icon="cancel" color="red" @click="cancelarCita(props.row)" />
         </template>
       </q-table>
     </q-card>
   </q-page>
 </template>
-
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
@@ -104,17 +126,11 @@ import axios from 'axios'
 
 const $q = useQuasar()
 
-/* ===============================
-   STATE
-================================ */
 const citas = ref([])
 const loading = ref(false)
 const estadoFiltro = ref('TODAS')
 const busqueda = ref('')
 
-/* ===============================
-   OPTIONS
-================================ */
 const estados = [
   { label: 'Pendiente', value: 'PENDIENTE' },
   { label: 'Confirmada', value: 'CONFIRMADA' },
@@ -128,92 +144,79 @@ const columns = [
     name: 'cliente',
     label: 'Cliente',
     field: (row) => `${row.nombreCliente} ${row.apellidosCliente}`,
-    align: 'left',
-    sortable: true,
   },
-  {
-    name: 'correo',
-    label: 'Correo',
-    field: 'correo',
-    align: 'left',
-  },
-  {
-    name: 'telefono',
-    label: 'Teléfono',
-    field: 'telefono',
-    align: 'center',
-  },
-  {
-    name: 'servicios',
-    label: 'Servicios',
-    align: 'left',
-  },
-  {
-    name: 'fechaHora',
-    label: 'Fecha y hora',
-    field: 'fechaHora',
-    align: 'center',
-    sortable: true,
-  },
-  {
-    name: 'estado',
-    label: 'Estado',
-    align: 'center',
-  },
-  {
-    name: 'acciones',
-    label: 'Acciones',
-    align: 'center',
-  },
+  { name: 'correo', label: 'Correo', field: 'correo' },
+  { name: 'telefono', label: 'Teléfono', field: 'telefono', align: 'center' },
+  { name: 'servicios', label: 'Servicios' },
+  { name: 'fechaHora', label: 'Fecha y hora', field: 'fechaHora', sortable: true },
+  { name: 'estado', label: 'Estado', align: 'center' },
+  { name: 'acciones', label: 'Acciones', align: 'center' },
 ]
 
-/* ===============================
-   LIFECYCLE
-================================ */
 onMounted(cargarCitas)
 
-/* ===============================
-   METHODS
-================================ */
 async function cargarCitas() {
   loading.value = true
-  try {
-    const res = await axios.get('http://localhost:8082/api/citas')
-    citas.value = res.data
-  } finally {
-    loading.value = false
-  }
+  const res = await axios.get('http://localhost:8082/api/citas')
+  citas.value = res.data
+  loading.value = false
+}
+
+function limpiarFiltros() {
+  estadoFiltro.value = 'TODAS'
+  busqueda.value = ''
 }
 
 async function cambiarEstado(cita) {
   await axios.patch(`http://localhost:8082/api/citas/${cita.id}/estado`, null, {
     params: { estado: cita.estado },
   })
+  $q.notify({ type: 'positive', message: 'Estado actualizado' })
+}
 
-  $q.notify({
-    type: 'positive',
-    message: 'Estado actualizado correctamente',
+async function cancelarCita(cita) {
+  $q.dialog({
+    title: 'Cancelar cita',
+    message: '¿Seguro que deseas cancelar esta cita?',
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    cita.estado = 'CANCELADA'
+    await cambiarEstado(cita)
   })
 }
 
-/* ===============================
-   COMPUTED
-================================ */
-const citasFiltradas = computed(() => {
-  return citas.value.filter((c) => {
+const citasFiltradas = computed(() =>
+  citas.value.filter((c) => {
     const okEstado = estadoFiltro.value === 'TODAS' || c.estado === estadoFiltro.value
-
-    const texto = busqueda.value.toLowerCase()
-    const okBusqueda =
-      !texto || c.correo?.toLowerCase().includes(texto) || c.telefono?.includes(texto)
-
+    const t = busqueda.value.toLowerCase()
+    const okBusqueda = !t || c.correo?.toLowerCase().includes(t) || c.telefono?.includes(t)
     return okEstado && okBusqueda
-  })
-})
+  }),
+)
 
-/* ===============================
-   HELPERS
-================================ */
+const kpis = computed(() => [
+  { label: 'Total', value: citas.value.length, icon: 'event', color: 'primary' },
+  {
+    label: 'Pendientes',
+    value: citas.value.filter((c) => c.estado === 'PENDIENTE').length,
+    icon: 'schedule',
+    color: 'orange',
+  },
+  {
+    label: 'Confirmadas',
+    value: citas.value.filter((c) => c.estado === 'CONFIRMADA').length,
+    icon: 'check_circle',
+    color: 'blue',
+  },
+  {
+    label: 'Canceladas',
+    value: citas.value.filter((c) => c.estado === 'CANCELADA').length,
+    icon: 'cancel',
+    color: 'red',
+  },
+])
+
 function formatearFecha(fecha) {
   return new Date(fecha).toLocaleString('es-MX', {
     dateStyle: 'medium',
@@ -221,26 +224,13 @@ function formatearFecha(fecha) {
   })
 }
 
-function colorEstado(estado) {
-  return (
-    {
-      PENDIENTE: 'orange',
-      CONFIRMADA: 'blue',
-      ATENDIDA: 'green',
-      CANCELADA: 'red',
-      REAGENDADA: 'purple',
-    }[estado] || 'grey'
-  )
+function colorEstado(e) {
+  return {
+    PENDIENTE: 'orange',
+    CONFIRMADA: 'blue',
+    ATENDIDA: 'green',
+    CANCELADA: 'red',
+    REAGENDADA: 'purple',
+  }[e]
 }
 </script>
-
-<style scoped>
-.q-page {
-  max-width: 1400px;
-  margin: auto;
-}
-
-.q-table td {
-  vertical-align: middle;
-}
-</style>
