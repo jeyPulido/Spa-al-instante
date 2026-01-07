@@ -3,6 +3,8 @@ package com.example.demo.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "citas")
@@ -20,15 +22,25 @@ public class Cita {
     private String apellidosCliente;
 
     private String correo;
+    @ManyToOne
+    @JoinColumn(name = "usuario_id")
+    private Usuario usuario;
 
     private String telefono;
 
     @Column(name = "fecha_hora")
     private LocalDateTime fechaHora;
 
-    @ManyToOne
-    @JoinColumn(name = "servicio_id") 
-    private Servicio servicio;
+    @ManyToMany
+    @JoinTable(
+        name = "cita_servicios",
+        joinColumns = @JoinColumn(name = "cita_id"),
+        inverseJoinColumns = @JoinColumn(name = "servicio_id")
+    )
+    private List<Servicio> servicios = new ArrayList<>();
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private EstadoCita estado = EstadoCita.PENDIENTE;
 
 	public Long getId() {
 		return id;
@@ -78,12 +90,30 @@ public class Cita {
 		this.fechaHora = fechaHora;
 	}
 
-	public Servicio getServicio() {
-		return servicio;
+
+
+	public List<Servicio> getServicios() {
+		return servicios;
 	}
 
-	public void setServicio(Servicio servicio) {
-		this.servicio = servicio;
+	public void setServicios(List<Servicio> servicios) {
+		this.servicios = servicios;
+	}
+
+	public Usuario getUsuario() {
+		return usuario;
+	}
+
+	public void setUsuario(Usuario usuario) {
+		this.usuario = usuario;
+	}
+
+	public EstadoCita getEstado() {
+		return estado;
+	}
+
+	public void setEstado(EstadoCita estado) {
+		this.estado = estado;
 	}
     
     

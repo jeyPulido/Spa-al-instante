@@ -3,9 +3,12 @@ package com.example.demo.service;
 import com.example.demo.dto.CitaRequest;
 import com.example.demo.dto.HorarioDTO;
 import com.example.demo.entity.Cita;
+import com.example.demo.entity.EstadoCita;
 import com.example.demo.entity.Servicio;
+import com.example.demo.entity.Usuario;
 import com.example.demo.repository.CitaRepository;
 import com.example.demo.repository.ServicioRepository;
+import com.example.demo.repository.UsuarioRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.*;
@@ -17,17 +20,20 @@ public class CitaService {
 
     private final CitaRepository citaRepository;
     private final ServicioRepository servicioRepository;
+    private final UsuarioRepository usuarioRepository;
     private final CalendarioService calendarioService;
     private final EmailService emailService;
 
     public CitaService(
             CitaRepository citaRepository,
             ServicioRepository servicioRepository,
+            UsuarioRepository usuarioRepository,
             CalendarioService calendarioService,
             EmailService emailService
     ) {
         this.citaRepository = citaRepository;
         this.servicioRepository = servicioRepository;
+        this.usuarioRepository = usuarioRepository;
         this.calendarioService = calendarioService;
         this.emailService = emailService;
     }
@@ -37,45 +43,75 @@ public class CitaService {
     =============================== */
     public Cita crearCita(CitaRequest request) {
 
-        Servicio servicio = servicioRepository.findById(request.servicioId)
-                .orElseThrow(() -> new RuntimeException("Servicio no encontrado"));
-
         Cita cita = new Cita();
         cita.setNombreCliente(request.nombreCliente);
         cita.setApellidosCliente(request.apellidosCliente);
         cita.setCorreo(request.correo);
         cita.setTelefono(request.telefono);
         cita.setFechaHora(request.fechaHora);
-        cita.setServicio(servicio);
 
+        // ✅ USUARIO
+        if (request.usuarioId != null) {
+            Usuario usuario = usuarioRepository.findById(request.usuarioId)
+                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+            cita.setUsuario(usuario);
+        }
+
+        // ✅ SERVICIOS
+        List<Servicio> servicios = servicioRepository
+                .findAllById(request.serviciosIds);
+
+        cita.setServicios(servicios);
+
+        // ✅ GUARDAR
         Cita citaGuardada = citaRepository.save(cita);
 
+        // 🔥 EMAIL CONFIRMACIÓN
         emailService.enviarCorreoConfirmacion(citaGuardada);
 
         return citaGuardada;
     }
 
     /* ===============================
-       CANCELAR
+       CANCELAR CITA
     =============================== */
     public void cancelarCita(Long id) {
         Cita cita = citaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
+            .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
 
-        citaRepository.deleteById(id);
+        cita.setEstado(EstadoCita.CANCELADA);
+        citaRepository.save(cita);
+
         emailService.enviarCorreoCancelacion(cita);
     }
 
+    public Cita cambiarEstado(Long id, EstadoCita estado) {
+        Cita cita = citaRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
+
+        cita.setEstado(estado);
+        return citaRepository.save(cita);
+    }
+
+    /* ===============================
+       LISTAR TODAS
+    =============================== */
     public List<Cita> obtenerTodas() {
         return citaRepository.findAll();
     }
 
     /* ===============================
-       HORARIOS DISPONIBLES (DTO)
+       HISTORIAL POR USUARIO
+    =============================== */
+    public List<Cita> obtenerCitasPorUsuario(Long usuarioId) {
+        return citaRepository.findByUsuario_IdOrderByFechaHoraDesc(usuarioId);
+    }
+
+    /* ===============================
+       HORARIOS DISPONIBLES
     =============================== */
     public List<HorarioDTO> obtenerHorariosDisponibles(LocalDate fecha) {
 
-        // ❌ Día cerrado (domingos, festivos, +2 meses)
         if (calendarioService.esDiaCerrado(fecha)) {
             return List.of();
         }
@@ -96,17 +132,18 @@ public class CitaService {
 
             boolean disponible = count < 2;
 
-            resultado.add(
-                    new HorarioDTO(
-                            hora.toString().substring(0, 5),
-                            disponible
-                    )
-            );
+            resultado.add(new HorarioDTO(
+                    hora.toString().substring(0, 5),
+                    disponible
+            ));
         }
 
         return resultado;
     }
 
+    /* ===============================
+       DÍAS SATURADOS
+    =============================== */
     public List<LocalDate> obtenerDiasSaturados() {
 
         Map<LocalDate, Long> conteo = citaRepository.findAll().stream()
@@ -115,7 +152,7 @@ public class CitaService {
                         Collectors.counting()
                 ));
 
-        int maxPorDia = (20 - 8 + 1) * 2; // 2 citas por hora
+        int maxPorDia = (20 - 8 + 1) * 2;
 
         return conteo.entrySet().stream()
                 .filter(e -> e.getValue() >= maxPorDia)

@@ -8,6 +8,11 @@ import java.util.List;
 
 public interface CitaRepository extends JpaRepository<Cita, Long> {
 
-    // ✔ ÚNICO MÉTODO NECESARIO
-    List<Cita> findByFechaHoraBetween(LocalDateTime inicio, LocalDateTime fin);
+    List<Cita> findByFechaHoraBetween(
+            LocalDateTime inicio,
+            LocalDateTime fin
+    );
+
+    // ✅ RELACIÓN CORRECTA
+    List<Cita> findByUsuario_IdOrderByFechaHoraDesc(Long usuarioId);
 }

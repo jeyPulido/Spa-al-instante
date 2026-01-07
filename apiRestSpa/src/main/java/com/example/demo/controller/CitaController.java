@@ -3,8 +3,7 @@ package com.example.demo.controller;
 import com.example.demo.dto.CitaRequest;
 import com.example.demo.dto.HorarioDTO;
 import com.example.demo.entity.Cita;
-import com.example.demo.entity.Servicio;
-import com.example.demo.repository.ServicioRepository;
+import com.example.demo.entity.EstadoCita;
 import com.example.demo.service.CitaService;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,17 +16,14 @@ import java.util.List;
 public class CitaController {
 
     private final CitaService citaService;
-    private final ServicioRepository servicioRepository;
 
-    public CitaController(CitaService citaService, ServicioRepository servicioRepository) {
+
+    public CitaController(CitaService citaService) {
         this.citaService = citaService;
-        this.servicioRepository = servicioRepository;
+
     }
 
-    @GetMapping("/servicios")
-    public List<Servicio> obtenerServicios() {
-        return servicioRepository.findAll();
-    }
+    
 
     // ✅ HORARIOS CON DISPONIBILIDAD
     @GetMapping("/horarios-disponibles")
@@ -53,9 +49,21 @@ public class CitaController {
     public Cita crearCita(@RequestBody CitaRequest request) {
         return citaService.crearCita(request);
     }
+    @PatchMapping("/citas/{id}/estado")
+    public Cita cambiarEstado(
+            @PathVariable Long id,
+            @RequestParam EstadoCita estado
+    ) {
+        return citaService.cambiarEstado(id, estado);
+    }
 
     @DeleteMapping("/citas/{id}")
     public void cancelarCita(@PathVariable Long id) {
         citaService.cancelarCita(id);
     }
+    @GetMapping("/citas/usuario/{id}")
+    public List<Cita> obtenerCitasPorUsuario(@PathVariable Long id) {
+        return citaService.obtenerCitasPorUsuario(id);
+    }
+
 }

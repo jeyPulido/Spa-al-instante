@@ -1,6 +1,6 @@
 package com.example.demo.dto;
-
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class CitaRequest {
 
@@ -9,5 +9,9 @@ public class CitaRequest {
     public String correo;
     public String telefono;
     public LocalDateTime fechaHora;
-    public Long servicioId;
+
+    // 🔥 CAMBIO
+    public List<Long> serviciosIds;
+
+    public Long usuarioId;
 }

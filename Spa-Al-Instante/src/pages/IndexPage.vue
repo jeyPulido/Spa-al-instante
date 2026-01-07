@@ -2,7 +2,13 @@
   <q-page class="bg-secondary">
     <!-- 🛒 CARRITO FLOTANTE -->
     <q-page-sticky position="bottom-right" :offset="[18, 18]" class="carrito-flotante">
-      <q-btn fab color="primary" icon="shopping_cart" @click="irCarrito">
+      <q-btn
+        fab
+        color="primary"
+        icon="shopping_cart"
+        :disable="carrito.length === 0"
+        @click="irCarrito"
+      >
         <q-badge v-if="carrito.length > 0" color="red" floating :label="carrito.length" />
       </q-btn>
     </q-page-sticky>
@@ -144,6 +150,13 @@ function agregarCarrito(servicio) {
 }
 
 function irCarrito() {
+  if (carrito.value.length === 0) {
+    $q.notify({
+      type: 'info',
+      message: 'Tu carrito está vacío',
+    })
+    return
+  }
   router.push('/carrito')
 }
 
