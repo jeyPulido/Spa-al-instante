@@ -98,7 +98,7 @@
 
       <div class="mapa-container">
         <iframe
-          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3757.548460610946!2d-99.23093792478016!3d19.64659298167911!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x85d21e5c07387a6f%3A0xd7735472495ee4aa!2sTesci%20-%20Tecnol%C3%B3gico%20de%20Estudios%20Superiores%20de%20Cuautitl%C3%A1n%20Izcalli!5e0!3m2!1ses!2smx!4v1767822428596!5m2!1ses!2smx"
+          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15029.205177928192!2d-99.22835534458014!3d19.657147199999997!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x85d21e363ffe0b93%3A0x1ff0c64b8c3f7c74!2sDepilaT!5e0!3m2!1ses-419!2smx!4v1767852264585!5m2!1ses-419!2smx"
           width="1200"
           height="450"
           style="border: 0"
