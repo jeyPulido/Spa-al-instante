@@ -8,11 +8,7 @@ import java.util.List;
 
 public interface CitaRepository extends JpaRepository<Cita, Long> {
 
-    List<Cita> findByFechaHoraBetween(
-            LocalDateTime inicio,
-            LocalDateTime fin
-    );
+	List<Cita> findByFechaHoraBetween(LocalDateTime inicio, LocalDateTime fin);
 
-    // ✅ RELACIÓN CORRECTA
-    List<Cita> findByUsuario_IdOrderByFechaHoraDesc(Long usuarioId);
+	List<Cita> findByUsuario_IdOrderByFechaHoraDesc(Long usuarioId);
 }

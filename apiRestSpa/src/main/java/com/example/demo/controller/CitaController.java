@@ -15,62 +15,51 @@ import java.util.List;
 @CrossOrigin("*")
 public class CitaController {
 
-    private final CitaService citaService;
+	private final CitaService citaService;
 
+	public CitaController(CitaService citaService) {
+		this.citaService = citaService;
 
-    public CitaController(CitaService citaService) {
-        this.citaService = citaService;
+	}
 
-    }
+	@GetMapping("/horarios-disponibles")
+	public List<HorarioDTO> obtenerHorarios(@RequestParam String fecha) {
+		return citaService.obtenerHorariosDisponibles(LocalDate.parse(fecha));
+	}
 
-    
+	@GetMapping("/dias-saturados")
+	public List<String> obtenerDiasSaturados() {
+		return citaService.obtenerDiasSaturados().stream().map(LocalDate::toString).toList();
+	}
 
-    // ✅ HORARIOS CON DISPONIBILIDAD
-    @GetMapping("/horarios-disponibles")
-    public List<HorarioDTO> obtenerHorarios(@RequestParam String fecha) {
-        return citaService.obtenerHorariosDisponibles(LocalDate.parse(fecha));
-    }
+	@GetMapping("/citas")
+	public List<Cita> obtenerCitas() {
+		return citaService.obtenerTodas();
+	}
 
-    // ✅ DÍAS SATURADOS
-    @GetMapping("/dias-saturados")
-    public List<String> obtenerDiasSaturados() {
-        return citaService.obtenerDiasSaturados()
-                .stream()
-                .map(LocalDate::toString)
-                .toList();
-    }
+	@PostMapping("/citas")
+	public Cita crearCita(@RequestBody CitaRequest request) {
+		return citaService.crearCita(request);
+	}
 
-    @GetMapping("/citas")
-    public List<Cita> obtenerCitas() {
-        return citaService.obtenerTodas();
-    }
+	@PatchMapping("/citas/{id}/estado")
+	public Cita cambiarEstado(@PathVariable Long id, @RequestParam EstadoCita estado) {
+		return citaService.cambiarEstado(id, estado);
+	}
 
-    @PostMapping("/citas")
-    public Cita crearCita(@RequestBody CitaRequest request) {
-        return citaService.crearCita(request);
-    }
-    @PatchMapping("/citas/{id}/estado")
-    public Cita cambiarEstado(
-            @PathVariable Long id,
-            @RequestParam EstadoCita estado
-    ) {
-        return citaService.cambiarEstado(id, estado);
-    }
+	@DeleteMapping("/citas/{id}")
+	public void cancelarCita(@PathVariable Long id) {
+		citaService.cancelarCita(id);
+	}
 
-    @DeleteMapping("/citas/{id}")
-    public void cancelarCita(@PathVariable Long id) {
-        citaService.cancelarCita(id);
-    }
-    @GetMapping("/citas/usuario/{id}")
-    public List<Cita> obtenerCitasPorUsuario(@PathVariable Long id) {
-        return citaService.obtenerCitasPorUsuario(id);
-    }
-    @PatchMapping("/citas/{id}/reagendar")
-    public Cita reagendarCita(
-            @PathVariable Long id,
-            @RequestParam String nuevaFechaHora
-    ) {
-        return citaService.reagendarCita(id, nuevaFechaHora);
-    }
+	@GetMapping("/citas/usuario/{id}")
+	public List<Cita> obtenerCitasPorUsuario(@PathVariable Long id) {
+		return citaService.obtenerCitasPorUsuario(id);
+	}
+
+	@PatchMapping("/citas/{id}/reagendar")
+	public Cita reagendarCita(@PathVariable Long id, @RequestParam String nuevaFechaHora) {
+		return citaService.reagendarCita(id, nuevaFechaHora);
+	}
 
 }

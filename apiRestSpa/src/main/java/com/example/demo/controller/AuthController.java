@@ -11,19 +11,19 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin
 public class AuthController {
 
-    private final AuthService authService;
+	private final AuthService authService;
 
-    public AuthController(AuthService authService) {
-        this.authService = authService;
-    }
+	public AuthController(AuthService authService) {
+		this.authService = authService;
+	}
 
-    @PostMapping("/login")
-    public AuthResponse login(@RequestBody LoginRequest request) {
-        return new AuthResponse(authService.login(request));
-    }
+	@PostMapping("/login")
+	public AuthResponse login(@RequestBody LoginRequest request) {
+		return new AuthResponse(authService.login(request));
+	}
 
-    @PostMapping("/register")
-    public void register(@RequestBody RegistroRequest request) {
-        authService.register(request);
-    }
+	@PostMapping("/register")
+	public void register(@RequestBody RegistroRequest request) {
+		authService.register(request);
+	}
 }

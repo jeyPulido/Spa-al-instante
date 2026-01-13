@@ -11,40 +11,36 @@ import java.util.List;
 @CrossOrigin("*")
 public class ServicioController {
 
-    private final ServicioRepository servicioRepository;
+	private final ServicioRepository servicioRepository;
 
-    public ServicioController(ServicioRepository servicioRepository) {
-        this.servicioRepository = servicioRepository;
-    }
+	public ServicioController(ServicioRepository servicioRepository) {
+		this.servicioRepository = servicioRepository;
+	}
 
-    // ✅ LISTAR
-    @GetMapping
-    public List<Servicio> listar() {
-        return servicioRepository.findAll();
-    }
+	@GetMapping
+	public List<Servicio> listar() {
+		return servicioRepository.findAll();
+	}
 
-    // ✅ CREAR
-    @PostMapping
-    public Servicio crear(@RequestBody Servicio servicio) {
-        return servicioRepository.save(servicio);
-    }
+	@PostMapping
+	public Servicio crear(@RequestBody Servicio servicio) {
+		return servicioRepository.save(servicio);
+	}
 
-    // ✅ EDITAR
-    @PutMapping("/{id}")
-    public Servicio actualizar(@PathVariable Long id, @RequestBody Servicio servicio) {
-        Servicio existente = servicioRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Servicio no encontrado"));
+	@PutMapping("/{id}")
+	public Servicio actualizar(@PathVariable Long id, @RequestBody Servicio servicio) {
+		Servicio existente = servicioRepository.findById(id)
+				.orElseThrow(() -> new RuntimeException("Servicio no encontrado"));
 
-        existente.setNombre(servicio.getNombre());
-        existente.setDescripcion(servicio.getDescripcion());
-        existente.setPrecio(servicio.getPrecio());
+		existente.setNombre(servicio.getNombre());
+		existente.setDescripcion(servicio.getDescripcion());
+		existente.setPrecio(servicio.getPrecio());
 
-        return servicioRepository.save(existente);
-    }
+		return servicioRepository.save(existente);
+	}
 
-    // ✅ ELIMINAR
-    @DeleteMapping("/{id}")
-    public void eliminar(@PathVariable Long id) {
-        servicioRepository.deleteById(id);
-    }
+	@DeleteMapping("/{id}")
+	public void eliminar(@PathVariable Long id) {
+		servicioRepository.deleteById(id);
+	}
 }

@@ -12,46 +12,43 @@ import org.springframework.stereotype.Service;
 @Service
 public class AuthService {
 
-    private final UsuarioRepository usuarioRepository;
-    private final JwtService jwtService;
-    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+	private final UsuarioRepository usuarioRepository;
+	private final JwtService jwtService;
+	private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
-    public AuthService(UsuarioRepository usuarioRepository, JwtService jwtService) {
-        this.usuarioRepository = usuarioRepository;
-        this.jwtService = jwtService;
-    }
+	public AuthService(UsuarioRepository usuarioRepository, JwtService jwtService) {
+		this.usuarioRepository = usuarioRepository;
+		this.jwtService = jwtService;
+	}
 
-    public String login(LoginRequest request) {
+	public String login(LoginRequest request) {
 
-        Usuario usuario = usuarioRepository.findByCorreo(request.correo)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+		Usuario usuario = usuarioRepository.findByCorreo(request.correo)
+				.orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        if (!encoder.matches(request.password, usuario.getPassword())) {
-            throw new RuntimeException("Credenciales incorrectas");
-        }
+		if (!encoder.matches(request.password, usuario.getPassword())) {
+			throw new RuntimeException("Credenciales incorrectas");
+		}
 
-        return jwtService.generarToken(usuario);
-    }
+		return jwtService.generarToken(usuario);
+	}
 
-    public void register(RegistroRequest request) {
+	public void register(RegistroRequest request) {
 
-        if (usuarioRepository.existsByCorreo(request.correo)) {
-            throw new RuntimeException("Correo ya registrado");
-        }
+		if (usuarioRepository.existsByCorreo(request.correo)) {
+			throw new RuntimeException("Correo ya registrado");
+		}
 
-        Usuario u = new Usuario();
-        u.setNombre(request.nombre);
-        u.setApellidos(request.apellidos);
-        u.setCorreo(request.correo);
-        u.setTelefono(request.telefono);
-        u.setPassword(encoder.encode(request.password));
+		Usuario u = new Usuario();
+		u.setNombre(request.nombre);
+		u.setApellidos(request.apellidos);
+		u.setCorreo(request.correo);
+		u.setTelefono(request.telefono);
+		u.setPassword(encoder.encode(request.password));
 
-        // 👑 Si viene rol → úsalo, si no → CLIENTE
-        u.setRol(request.rol != null ? request.rol : Rol.CLIENTE);
+		u.setRol(request.rol != null ? request.rol : Rol.CLIENTE);
 
-        usuarioRepository.save(u);
-    }
-
-
+		usuarioRepository.save(u);
+	}
 
 }

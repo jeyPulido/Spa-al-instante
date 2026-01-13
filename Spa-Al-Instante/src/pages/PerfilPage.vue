@@ -1,19 +1,35 @@
 <template>
-  <q-page class="q-pa-md flex flex-center">
+  <q-page class="q-pa-md flex flex-center bg-grey-2">
     <q-card class="perfil-card q-pa-lg">
-      <!-- AVATAR -->
-      <div class="text-center q-mb-md">
-        <q-avatar size="90px" color="primary" text-color="white">
+      <div class="text-center q-mb-lg">
+        <q-avatar size="96px" color="primary" text-color="white">
           {{ iniciales }}
         </q-avatar>
+
         <div class="text-h6 q-mt-sm">{{ form.nombre }} {{ form.apellidos }}</div>
-        <div class="text-caption text-grey">Información personal</div>
+
+        <q-badge color="secondary" outline class="q-mt-xs"> Perfil del cliente </q-badge>
       </div>
 
-      <q-separator class="q-my-md" />
+      <q-separator class="q-mb-md" />
 
-      <!-- FORM -->
-      <q-input outlined dense v-model="form.nombre" label="Nombre" prepend-icon="person" />
+      <q-banner v-if="hayCambios" rounded dense class="bg-warning text-dark q-mb-md">
+        <template #avatar>
+          <q-icon name="info" />
+        </template>
+        Tienes cambios sin guardar
+      </q-banner>
+
+      <div class="text-subtitle2 text-grey-7 q-mb-sm">Datos personales</div>
+
+      <q-input
+        outlined
+        dense
+        v-model="form.nombre"
+        label="Nombre"
+        prepend-icon="person"
+        :rules="[(v) => !!v || 'El nombre es obligatorio']"
+      />
 
       <q-input
         outlined
@@ -22,6 +38,7 @@
         label="Apellidos"
         prepend-icon="badge"
         class="q-mt-sm"
+        :rules="[(v) => !!v || 'Los apellidos son obligatorios']"
       />
 
       <q-input
@@ -32,7 +49,9 @@
         prepend-icon="email"
         readonly
         class="q-mt-sm"
-      />
+      >
+        <template #hint> El correo no se puede modificar </template>
+      </q-input>
 
       <q-input
         outlined
@@ -42,19 +61,34 @@
         mask="##########"
         prepend-icon="phone"
         class="q-mt-sm"
+        :rules="[(v) => v.length === 10 || 'Debe tener 10 dígitos']"
       />
 
-      <q-btn
-        label="Guardar cambios"
-        color="primary"
-        class="q-mt-lg full-width"
-        :loading="loading"
-        icon="save"
-        @click="guardar"
-      />
+      <div class="row q-col-gutter-sm q-mt-lg">
+        <q-btn
+          label="Guardar cambios"
+          color="primary"
+          class="col"
+          icon="save"
+          :loading="loading"
+          :disable="!hayCambios"
+          @click="confirmarGuardado"
+        />
+
+        <q-btn
+          label="Restablecer"
+          flat
+          color="grey-7"
+          icon="refresh"
+          class="col"
+          :disable="!hayCambios"
+          @click="restablecer"
+        />
+      </div>
     </q-card>
   </q-page>
 </template>
+
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import axios from 'axios'
@@ -72,22 +106,55 @@ const form = ref({
   telefono: '',
 })
 
-const iniciales = computed(() => {
-  return ((form.value.nombre?.[0] || '') + (form.value.apellidos?.[0] || '')).toUpperCase()
-})
+const original = ref({})
+
+const iniciales = computed(() =>
+  ((form.value.nombre?.[0] || '') + (form.value.apellidos?.[0] || '')).toUpperCase(),
+)
+
+const hayCambios = computed(() => JSON.stringify(form.value) !== JSON.stringify(original.value))
 
 onMounted(() => {
   auth.init()
-  form.value = {
-    nombre: auth.user.nombre,
-    apellidos: auth.user.apellidos,
-    correo: auth.user.correo,
-    telefono: auth.user.telefono,
+
+  $q.loading.show({ message: 'Cargando tu perfil...' })
+
+  try {
+    form.value = {
+      nombre: auth.user.nombre,
+      apellidos: auth.user.apellidos,
+      correo: auth.user.correo,
+      telefono: auth.user.telefono,
+    }
+    original.value = { ...form.value }
+  } catch {
+    $q.notify({
+      type: 'negative',
+      icon: 'error',
+      message: 'No se pudo cargar la información del perfil',
+    })
+  } finally {
+    $q.loading.hide()
   }
 })
 
+function restablecer() {
+  form.value = { ...original.value }
+}
+
+function confirmarGuardado() {
+  $q.dialog({
+    title: 'Guardar cambios',
+    message: '¿Deseas guardar los cambios en tu perfil?',
+    cancel: true,
+    persistent: true,
+  }).onOk(guardar)
+}
+
 async function guardar() {
   loading.value = true
+  $q.loading.show({ message: 'Guardando cambios en tu perfil...' })
+
   try {
     const res = await axios.put(`http://localhost:8082/api/usuario/perfil/${auth.user.id}`, {
       nombre: form.value.nombre,
@@ -96,21 +163,31 @@ async function guardar() {
     })
 
     auth.login(res.data)
+    original.value = { ...form.value }
 
     $q.notify({
       type: 'positive',
       message: 'Perfil actualizado correctamente',
+      icon: 'check_circle',
+    })
+  } catch {
+    $q.notify({
+      type: 'negative',
+      message: 'No se pudo actualizar el perfil',
+      icon: 'error',
     })
   } finally {
     loading.value = false
+    $q.loading.hide()
   }
 }
 </script>
+
 <style scoped>
 .perfil-card {
   width: 100%;
   max-width: 420px;
-  border-radius: 16px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  border-radius: 18px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
 }
 </style>

@@ -1,6 +1,18 @@
 <template>
   <q-page class="q-pa-lg bg-grey-2">
-    <!-- HEADER -->
+    <q-inner-loading :showing="loading">
+      <q-spinner-gears size="60px" color="primary" />
+      <div class="q-mt-md text-primary text-weight-bold">Procesando información...</div>
+    </q-inner-loading>
+
+    <q-banner v-if="alerta.visible" :class="`bg-${alerta.color} text-white q-mb-md`" rounded dense>
+      <q-icon :name="alerta.icono" class="q-mr-sm" />
+      {{ alerta.mensaje }}
+      <template #action>
+        <q-btn flat dense icon="close" @click="alerta.visible = false" />
+      </template>
+    </q-banner>
+
     <q-card class="q-pa-md q-mb-lg bg-primary text-white">
       <div class="row items-center justify-between">
         <div class="row items-center">
@@ -12,7 +24,6 @@
       </div>
     </q-card>
 
-    <!-- KPIs -->
     <div class="row q-col-gutter-md q-mb-lg">
       <q-card class="col bg-white q-pa-md" v-for="kpi in kpis" :key="kpi.label">
         <div class="row items-center justify-between">
@@ -25,7 +36,6 @@
       </q-card>
     </div>
 
-    <!-- FILTROS -->
     <q-card class="q-pa-md q-mb-md">
       <q-tabs
         v-model="estadoFiltro"
@@ -61,7 +71,6 @@
       </div>
     </q-card>
 
-    <!-- TABLA -->
     <q-card flat bordered>
       <q-table
         flat
@@ -72,15 +81,13 @@
         row-key="id"
         :loading="loading"
       >
-        <!-- FECHA -->
-        <template v-slot:body-cell-fechaHora="props">
+        <template #body-cell-fechaHora="props">
           <div class="text-weight-medium">
             {{ formatearFecha(props.row.fechaHora) }}
           </div>
         </template>
 
-        <!-- SERVICIOS -->
-        <template v-slot:body-cell-servicios="props">
+        <template #body-cell-servicios="props">
           <q-chip
             v-for="s in props.row.servicios"
             :key="s.id"
@@ -93,8 +100,7 @@
           </q-chip>
         </template>
 
-        <!-- ESTADO -->
-        <template v-slot:body-cell-estado="props">
+        <template #body-cell-estado="props">
           <q-select
             dense
             outlined
@@ -103,7 +109,7 @@
             :options="estados"
             v-model="props.row.estado"
             @update:model-value="cambiarEstado(props.row)"
-            style="min-width: 140px"
+            style="min-width: 150px"
           >
             <template #prepend>
               <q-icon name="circle" :color="colorEstado(props.row.estado)" />
@@ -111,14 +117,14 @@
           </q-select>
         </template>
 
-        <!-- ACCIONES -->
-        <template v-slot:body-cell-acciones="props">
+        <template #body-cell-acciones="props">
           <q-btn flat dense round icon="cancel" color="red" @click="cancelarCita(props.row)" />
         </template>
       </q-table>
     </q-card>
   </q-page>
 </template>
+
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
@@ -130,6 +136,17 @@ const citas = ref([])
 const loading = ref(false)
 const estadoFiltro = ref('TODAS')
 const busqueda = ref('')
+
+const alerta = ref({
+  visible: false,
+  mensaje: '',
+  color: 'primary',
+  icono: 'info',
+})
+
+function mostrarAlerta(mensaje, color = 'primary', icono = 'info') {
+  alerta.value = { visible: true, mensaje, color, icono }
+}
 
 const estados = [
   { label: 'Pendiente', value: 'PENDIENTE' },
@@ -157,9 +174,14 @@ onMounted(cargarCitas)
 
 async function cargarCitas() {
   loading.value = true
-  const res = await axios.get('http://localhost:8082/api/citas')
-  citas.value = res.data
-  loading.value = false
+  try {
+    const res = await axios.get('http://localhost:8082/api/citas')
+    citas.value = res.data
+  } catch {
+    mostrarAlerta('Error al cargar las citas', 'red', 'error')
+  } finally {
+    loading.value = false
+  }
 }
 
 function limpiarFiltros() {
@@ -168,13 +190,20 @@ function limpiarFiltros() {
 }
 
 async function cambiarEstado(cita) {
-  await axios.patch(`http://localhost:8082/api/citas/${cita.id}/estado`, null, {
-    params: { estado: cita.estado },
-  })
-  $q.notify({ type: 'positive', message: 'Estado actualizado' })
+  loading.value = true
+  try {
+    await axios.patch(`http://localhost:8082/api/citas/${cita.id}/estado`, null, {
+      params: { estado: cita.estado },
+    })
+    mostrarAlerta('Estado actualizado correctamente', 'blue', 'sync')
+  } catch {
+    mostrarAlerta('No se pudo actualizar el estado', 'red', 'error')
+  } finally {
+    loading.value = false
+  }
 }
 
-async function cancelarCita(cita) {
+function cancelarCita(cita) {
   $q.dialog({
     title: 'Cancelar cita',
     message: '¿Seguro que deseas cancelar esta cita?',
@@ -183,6 +212,7 @@ async function cancelarCita(cita) {
   }).onOk(async () => {
     cita.estado = 'CANCELADA'
     await cambiarEstado(cita)
+    mostrarAlerta('Cita cancelada', 'orange', 'cancel')
   })
 }
 

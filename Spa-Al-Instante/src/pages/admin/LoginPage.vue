@@ -1,7 +1,6 @@
 <template>
   <q-page class="flex flex-center bg-grey-2">
     <q-card class="login-card q-pa-lg">
-      <!-- LOGO / TITULO -->
       <div class="text-center q-mb-md">
         <q-avatar size="80px" color="primary" text-color="white">
           <q-icon name="spa" size="40px" />
@@ -10,7 +9,6 @@
         <div class="text-caption text-grey">Iniciar sesión</div>
       </div>
 
-      <!-- FORM -->
       <q-input
         outlined
         dense
@@ -31,7 +29,6 @@
         @keyup.enter="login"
       />
 
-      <!-- BOTONES -->
       <q-btn
         label="Entrar"
         color="primary"
@@ -45,6 +42,7 @@
     </q-card>
   </q-page>
 </template>
+
 <script setup>
 import axios from 'axios'
 import { ref } from 'vue'
@@ -64,12 +62,18 @@ async function login() {
   if (!correo.value || !password.value) {
     $q.notify({
       type: 'warning',
+      icon: 'warning',
       message: 'Ingresa correo y contraseña',
+      position: 'top',
     })
     return
   }
 
   loading.value = true
+
+  $q.loading.show({
+    message: 'Iniciando sesión, por favor espera...',
+  })
 
   try {
     const res = await axios.post('http://localhost:8082/api/auth/login', {
@@ -79,27 +83,40 @@ async function login() {
 
     auth.login(res.data.token)
 
+    $q.loading.hide()
+
     $q.notify({
       type: 'positive',
+      icon: 'check_circle',
       message: 'Sesión iniciada correctamente',
+      position: 'top',
+      timeout: 2500,
     })
 
-    router.push(auth.user.rol === 'ADMIN' ? '/' : '/')
+    router.push('/')
   } catch (error) {
+    $q.loading.hide()
+
     if (error.response?.status === 404) {
       $q.notify({
         type: 'negative',
+        icon: 'person_off',
         message: 'Usuario no registrado',
+        position: 'top',
       })
     } else if (error.response?.status === 401) {
       $q.notify({
         type: 'negative',
+        icon: 'lock',
         message: 'Contraseña incorrecta',
+        position: 'top',
       })
     } else {
       $q.notify({
         type: 'negative',
+        icon: 'error',
         message: 'Error al iniciar sesión',
+        position: 'top',
       })
     }
   } finally {
@@ -107,6 +124,7 @@ async function login() {
   }
 }
 </script>
+
 <style scoped>
 .login-card {
   width: 100%;

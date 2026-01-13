@@ -1,12 +1,10 @@
 <template>
   <q-page class="carrito-page q-pa-md">
-    <!-- TÍTULO -->
     <div class="titulo-container">
       <p class="titulo-carrito">🛒 Tu Carrito</p>
       <div class="linea"></div>
     </div>
 
-    <!-- SERVICIOS -->
     <div class="contenedor-central">
       <q-card
         v-for="(item, index) in carrito"
@@ -28,7 +26,6 @@
       </q-card>
     </div>
 
-    <!-- FORMULARIO -->
     <div v-if="carrito.length" class="formulario-container q-mt-lg">
       <p class="form-title">Datos para confirmar tu cita</p>
 
@@ -42,9 +39,14 @@
           type="email"
           :readonly="logueado"
         />
-        <q-input filled v-model="form.telefono" label="Teléfono" mask="##########" />
+        <q-input
+          filled
+          v-model="form.telefono"
+          label="Teléfono"
+          mask="##########"
+          :readonly="logueado"
+        />
 
-        <!-- FECHA -->
         <q-input filled v-model="form.fecha" label="Fecha" readonly>
           <template #append>
             <q-icon name="event" class="cursor-pointer" />
@@ -61,7 +63,6 @@
           </q-popup-proxy>
         </q-input>
 
-        <!-- HORARIOS -->
         <q-select
           filled
           v-model="form.hora"
@@ -73,7 +74,6 @@
           :disable="!form.fecha || cargandoHorarios"
         />
 
-        <!-- RESUMEN -->
         <q-card-section>
           <p class="text-weight-bold">🧾 Resumen</p>
 
@@ -96,7 +96,6 @@
       </q-form>
     </div>
 
-    <!-- MODAL CONFIRMACIÓN -->
     <q-dialog v-model="mostrarConfirmacion">
       <q-card class="q-pa-md">
         <q-card-section class="text-center">
@@ -124,7 +123,6 @@ const $q = useQuasar()
 const router = useRouter()
 const auth = useAuthStore()
 
-/* ================= STATE ================= */
 const carrito = ref(JSON.parse(localStorage.getItem('carrito')) || [])
 
 const form = ref({
@@ -141,11 +139,10 @@ const cargandoHorarios = ref(false)
 const mostrarConfirmacion = ref(false)
 const diasSaturados = ref([])
 
-/* ================= COMPUTED ================= */
-const logueado = computed(() => !!auth.user)
+const logueado = computed(() => !!auth.user && auth.user.rol !== 'ADMIN')
+const esAdmin = computed(() => auth.user?.rol === 'ADMIN')
 const totalCarrito = computed(() => carrito.value.reduce((t, i) => t + Number(i.precio), 0))
 
-/* ================= WATCH ================= */
 watch(
   carrito,
   (nuevo) => {
@@ -158,7 +155,34 @@ watch(
   { deep: true },
 )
 
-/* ================= INIT ================= */
+function limpiarFormulario() {
+  form.value = {
+    nombre: '',
+    apellidos: '',
+    email: '',
+    telefono: '',
+    fecha: '',
+    hora: '',
+  }
+}
+
+function validarFormulario() {
+  if (!form.value.nombre.trim()) return 'El nombre es obligatorio'
+  if (!form.value.apellidos.trim()) return 'Los apellidos son obligatorios'
+  if (!form.value.email.trim()) return 'El correo es obligatorio'
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(form.value.email)) return 'El correo no es válido'
+
+  if (!form.value.telefono || form.value.telefono.length !== 10)
+    return 'El teléfono debe tener 10 dígitos'
+
+  if (!form.value.fecha) return 'Selecciona una fecha'
+  if (!form.value.hora) return 'Selecciona una hora'
+
+  return null
+}
+
 onMounted(async () => {
   auth.init()
 
@@ -167,18 +191,27 @@ onMounted(async () => {
     return
   }
 
-  if (auth.user) {
+  if (auth.user && !esAdmin.value) {
     form.value.nombre = auth.user.nombre
     form.value.apellidos = auth.user.apellidos
     form.value.email = auth.user.correo
     form.value.telefono = auth.user.telefono
+  } else {
+    limpiarFormulario()
   }
 
-  const res = await axios.get('http://localhost:8082/api/dias-saturados')
-  diasSaturados.value = res.data
+  $q.loading.show({ message: 'Cargando disponibilidad del spa...' })
+
+  try {
+    const res = await axios.get('http://localhost:8082/api/dias-saturados')
+    diasSaturados.value = res.data
+  } catch {
+    $q.notify({ type: 'negative', message: 'No se pudo cargar la disponibilidad' })
+  } finally {
+    $q.loading.hide()
+  }
 })
 
-/* ================= FECHAS ================= */
 const hoy = new Date()
 hoy.setHours(0, 0, 0, 0)
 const limite = new Date(hoy)
@@ -191,7 +224,6 @@ function opcionesCalendario(fecha) {
   return !diasSaturados.value.includes(fechaISO)
 }
 
-/* ================= HORARIOS ================= */
 async function alCambiarFecha() {
   horarios.value = []
   form.value.hora = ''
@@ -203,65 +235,96 @@ async function alCambiarFecha() {
     )
 
     const ahora = new Date()
-    const esHoy = form.value.fecha === ahora.toISOString().slice(0, 10)
-    const horaActualMinutos = ahora.getHours() * 60 + ahora.getMinutes()
+    const hoyLocal = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(
+      2,
+      '0',
+    )}-${String(ahora.getDate()).padStart(2, '0')}`
+
+    const esHoy = form.value.fecha === hoyLocal
+    const minutosActuales = ahora.getHours() * 60 + ahora.getMinutes()
 
     horarios.value = res.data
       .filter((h) => {
         if (!esHoy) return true
-
         const [hh, mm] = h.hora.split(':').map(Number)
-        const minutosHorario = hh * 60 + mm
-
-        return minutosHorario > horaActualMinutos
+        return hh * 60 + mm > minutosActuales
       })
       .map((h) => ({
         label: h.hora,
         value: h.hora,
         disable: !h.disponible,
       }))
+  } catch {
+    $q.notify({ type: 'negative', message: 'No se pudieron cargar los horarios' })
   } finally {
     cargandoHorarios.value = false
   }
 }
 
-/* ================= CONFIRMAR ================= */
 function confirmar() {
-  if (!form.value.fecha || !form.value.hora) {
-    $q.notify({ type: 'warning', message: 'Selecciona fecha y hora' })
+  const error = validarFormulario()
+
+  if (error) {
+    $q.notify({ type: 'warning', icon: 'warning', message: error })
     return
   }
+
   mostrarConfirmacion.value = true
 }
 
 async function enviarCita() {
-  mostrarConfirmacion.value = false
+  const error = validarFormulario()
+  if (error) {
+    $q.notify({ type: 'warning', message: error })
+    return
+  }
 
+  mostrarConfirmacion.value = false
   const fechaHora = `${form.value.fecha}T${form.value.hora}:00`
 
-  await axios.post('http://localhost:8082/api/citas', {
-    nombreCliente: form.value.nombre,
-    apellidosCliente: form.value.apellidos,
-    correo: form.value.email,
-    telefono: form.value.telefono,
-    fechaHora,
-    usuarioId: auth.user?.id || null,
-    serviciosIds: carrito.value.map((s) => s.id),
-  })
+  $q.loading.show({ message: 'Registrando tu cita en el spa...' })
 
-  $q.notify({ type: 'positive', message: 'Cita registrada correctamente' })
+  try {
+    await axios.post('http://localhost:8082/api/citas', {
+      nombreCliente: form.value.nombre,
+      apellidosCliente: form.value.apellidos,
+      correo: form.value.email,
+      telefono: form.value.telefono,
+      fechaHora,
+      usuarioId: auth.user?.id || null,
+      serviciosIds: carrito.value.map((s) => s.id),
+    })
 
-  localStorage.removeItem('carrito')
-  router.replace('/')
+    $q.loading.hide()
+
+    $q.dialog({
+      title: '✅ Cita registrada',
+      message: `
+        <p><strong>Tu cita fue registrada correctamente.</strong></p>
+        <p>📅 ${form.value.fecha}</p>
+        <p>⏰ ${form.value.hora}</p>
+        <p style="color:#c47c2c"><strong>PENDIENTE DE CONFIRMACIÓN</strong></p>
+      `,
+      html: true,
+      persistent: true,
+    }).onOk(() => {
+      localStorage.removeItem('carrito')
+      router.replace('/')
+    })
+  } catch {
+    $q.loading.hide()
+    $q.notify({
+      type: 'negative',
+      message: 'Error al registrar la cita',
+    })
+  }
 }
 
-/* ================= ELIMINAR ================= */
 function confirmarEliminar(index) {
   $q.dialog({
     title: 'Eliminar servicio',
     message: '¿Deseas quitar este servicio del carrito?',
     cancel: true,
-    persistent: true,
   }).onOk(() => {
     carrito.value.splice(index, 1)
     localStorage.setItem('carrito', JSON.stringify(carrito.value))

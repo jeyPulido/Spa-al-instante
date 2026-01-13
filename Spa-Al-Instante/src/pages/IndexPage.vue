@@ -1,6 +1,5 @@
 <template>
   <q-page class="bg-secondary">
-    <!-- 🛒 CARRITO FLOTANTE -->
     <q-page-sticky position="bottom-right" :offset="[18, 18]" class="carrito-flotante">
       <q-btn
         fab
@@ -8,13 +7,12 @@
         color="primary"
         icon="shopping_cart"
         :disable="totalItems === 0"
-        @click="irCarrito"
+        @click="confirmarIrCarrito"
       >
         <q-badge v-if="totalItems > 0" color="red" floating :label="totalItems" />
       </q-btn>
     </q-page-sticky>
 
-    <!-- 🌿 HERO -->
     <section class="hero-section">
       <div class="overlay"></div>
       <div class="hero-content text-center text-white">
@@ -24,7 +22,6 @@
       </div>
     </section>
 
-    <!-- 💆 SERVICIOS -->
     <section id="servicios" class="section">
       <p class="section-title">Nuestros Servicios</p>
 
@@ -47,7 +44,6 @@
       </div>
     </section>
 
-    <!-- 🕒 HORARIOS -->
     <section class="section horarios-section">
       <p class="section-title">Horarios de Atención</p>
 
@@ -78,7 +74,6 @@
       </div>
     </section>
 
-    <!-- 🖼️ GALERÍA -->
     <section class="section galeria-section">
       <p class="section-title">Nuestro Spa</p>
 
@@ -92,7 +87,6 @@
       </div>
     </section>
 
-    <!-- 📍 MAPA -->
     <section class="section mapa-section">
       <p class="section-title">Ubicación</p>
 
@@ -102,16 +96,14 @@
           width="1200"
           height="450"
           style="border: 0"
-          allowfullscreen=""
+          allowfullscreen
           loading="lazy"
-          referrerpolicy="no-referrer-when-downgrade"
         ></iframe>
       </div>
     </section>
 
-    <!-- 🧾 FOOTER -->
     <q-footer class="footer">
-      <p>© 2025 Spa al Instante</p>
+      <p>© 2026 Spa al Instante</p>
       <p>Bienestar • Relajación • Armonía</p>
     </q-footer>
   </q-page>
@@ -132,20 +124,40 @@ const carrito = ref([])
 const totalItems = computed(() => carrito.value.reduce((sum, item) => sum + item.cantidad, 0))
 
 async function cargarServicios() {
+  $q.loading.show({ message: 'Cargando servicios, por favor espera...' })
+
   try {
     const res = await api.get('/api/servicios')
     servicios.value = res.data
-  } catch {
+  } catch (error) {
     $q.notify({
       type: 'negative',
-      message: 'Error al cargar los servicios',
+      message: 'No fue posible cargar los servicios',
+      caption: error?.response
+        ? `Error ${error.response.status}: ${error.response.statusText}`
+        : 'Error de conexión con el servidor',
+      icon: 'error',
     })
+  } finally {
+    $q.loading.hide()
   }
 }
 
 function cargarCarritoLocal() {
-  const data = localStorage.getItem('carrito')
-  carrito.value = data ? JSON.parse(data) : []
+  try {
+    const data = localStorage.getItem('carrito')
+    carrito.value = data ? JSON.parse(data) : []
+  } catch {
+    carrito.value = []
+    localStorage.removeItem('carrito')
+
+    $q.notify({
+      type: 'warning',
+      message: 'El carrito se reinició por datos inválidos',
+      caption: 'Se detectó información corrupta',
+      icon: 'warning',
+    })
+  }
 }
 
 function guardarCarrito() {
@@ -158,7 +170,8 @@ function agregarCarrito(servicio) {
   if (existe) {
     $q.notify({
       type: 'warning',
-      message: 'Este servicio ya está en el carrito',
+      message: 'Este servicio ya está en tu carrito',
+      icon: 'info',
     })
     return
   }
@@ -168,19 +181,31 @@ function agregarCarrito(servicio) {
 
   $q.notify({
     type: 'positive',
-    message: `${servicio.nombre} agregado al carrito`,
+    message: 'Servicio agregado correctamente',
+    caption: servicio.nombre,
+    icon: 'check_circle',
   })
 }
 
-function irCarrito() {
+function confirmarIrCarrito() {
   if (totalItems.value === 0) {
     $q.notify({
       type: 'info',
       message: 'Tu carrito está vacío',
+      icon: 'shopping_cart',
     })
     return
   }
-  router.push('/carrito')
+
+  $q.dialog({
+    title: 'Ir al carrito',
+    message: '¿Deseas revisar tu carrito ahora?',
+    ok: 'Sí, ir',
+    cancel: 'Seguir viendo',
+    persistent: true,
+  }).onOk(() => {
+    router.push('/carrito')
+  })
 }
 
 onMounted(() => {
@@ -190,7 +215,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* HERO */
 .hero-section {
   height: 75vh;
   background: url('/statics/images.jpg') center/cover no-repeat;
@@ -214,7 +238,6 @@ onMounted(() => {
   width: 120px;
 }
 
-/* SECCIONES */
 .section {
   padding: 40px 20px;
 }
@@ -226,7 +249,6 @@ onMounted(() => {
   margin-bottom: 25px;
 }
 
-/* SERVICIOS */
 .servicios-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -245,7 +267,6 @@ onMounted(() => {
   box-shadow: 0 12px 25px rgba(0, 0, 0, 0.12);
 }
 
-/* HORARIOS */
 .horarios-section {
   background: #f8f6f3;
 }
@@ -273,7 +294,6 @@ onMounted(() => {
   font-weight: bold;
 }
 
-/* GALERÍA */
 .galeria-grid {
   max-width: 1100px;
   margin: auto;
@@ -294,7 +314,6 @@ onMounted(() => {
   transform: scale(1.05);
 }
 
-/* MAPA */
 .mapa-container {
   max-width: 1100px;
   margin: auto;
@@ -303,16 +322,133 @@ onMounted(() => {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
 }
 
-/* FOOTER */
 .footer {
   background: #2f2f2f;
   color: white;
   text-align: center;
   padding: 20px;
 }
+@media (max-width: 600px) {
+  .footer {
+    padding: 8px 12px;
+    font-size: 12px;
+    line-height: 1.2;
+  }
 
-/* CARRITO */
+  .footer p {
+    margin: 4px 0;
+  }
+}
+
 .carrito-flotante {
   z-index: 9999;
+}
+
+.hero-content {
+  animation: heroFade 1.4s ease-out forwards;
+}
+
+@keyframes heroFade {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+}
+
+.my-card {
+  animation: cardFadeUp 0.8s ease both;
+}
+
+@keyframes cardFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.my-card:hover {
+  animation: spaFloat 0.6s ease-in-out forwards;
+}
+
+@keyframes spaFloat {
+  from {
+    transform: translateY(-6px);
+  }
+  to {
+    transform: translateY(-10px);
+  }
+}
+
+.galeria-grid img {
+  animation: galleryFade 1s ease both;
+}
+
+@keyframes galleryFade {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.galeria-grid img:hover {
+  transform: scale(1.08);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.25);
+}
+
+.horarios-card {
+  animation: horariosFade 1s ease-out both;
+}
+
+@keyframes horariosFade {
+  from {
+    opacity: 0;
+    transform: translateY(25px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.carrito-flotante .q-btn {
+  animation: carritoPulse 2.5s infinite ease-in-out;
+}
+
+@keyframes carritoPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.q-badge {
+  animation: badgeBounce 1.4s ease-in-out infinite;
+}
+
+@keyframes badgeBounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
 }
 </style>

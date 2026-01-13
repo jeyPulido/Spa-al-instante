@@ -18,154 +18,124 @@ import java.util.stream.Collectors;
 @Service
 public class CitaService {
 
-    private final CitaRepository citaRepository;
-    private final ServicioRepository servicioRepository;
-    private final UsuarioRepository usuarioRepository;
-    private final CalendarioService calendarioService;
-    private final EmailService emailService;
+	private final CitaRepository citaRepository;
+	private final ServicioRepository servicioRepository;
+	private final UsuarioRepository usuarioRepository;
+	private final CalendarioService calendarioService;
+	private final EmailService emailService;
 
-    public CitaService(
-            CitaRepository citaRepository,
-            ServicioRepository servicioRepository,
-            UsuarioRepository usuarioRepository,
-            CalendarioService calendarioService,
-            EmailService emailService
-    ) {
-        this.citaRepository = citaRepository;
-        this.servicioRepository = servicioRepository;
-        this.usuarioRepository = usuarioRepository;
-        this.calendarioService = calendarioService;
-        this.emailService = emailService;
-    }
+	public CitaService(CitaRepository citaRepository, ServicioRepository servicioRepository,
+			UsuarioRepository usuarioRepository, CalendarioService calendarioService, EmailService emailService) {
+		this.citaRepository = citaRepository;
+		this.servicioRepository = servicioRepository;
+		this.usuarioRepository = usuarioRepository;
+		this.calendarioService = calendarioService;
+		this.emailService = emailService;
+	}
 
-    /* ===============================
-       CREAR CITA
-    =============================== */
-    public Cita crearCita(CitaRequest request) {
+	public Cita crearCita(CitaRequest request) {
 
-        Cita cita = new Cita();
-        cita.setNombreCliente(request.nombreCliente);
-        cita.setApellidosCliente(request.apellidosCliente);
-        cita.setCorreo(request.correo);
-        cita.setTelefono(request.telefono);
-        cita.setFechaHora(request.fechaHora);
+		Cita cita = new Cita();
+		cita.setNombreCliente(request.nombreCliente);
+		cita.setApellidosCliente(request.apellidosCliente);
+		cita.setCorreo(request.correo);
+		cita.setTelefono(request.telefono);
+		cita.setFechaHora(request.fechaHora);
+		cita.setEstado(EstadoCita.PENDIENTE);
 
-        // ✅ USUARIO
-        if (request.usuarioId != null) {
-            Usuario usuario = usuarioRepository.findById(request.usuarioId)
-                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-            cita.setUsuario(usuario);
-        }
+		if (request.usuarioId != null) {
+			Usuario usuario = usuarioRepository.findById(request.usuarioId)
+					.orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+			cita.setUsuario(usuario);
+		}
 
-        // ✅ SERVICIOS
-        List<Servicio> servicios = servicioRepository
-                .findAllById(request.serviciosIds);
+		List<Servicio> servicios = servicioRepository.findAllById(request.serviciosIds);
+		cita.setServicios(servicios);
 
-        cita.setServicios(servicios);
+		Cita citaGuardada = citaRepository.save(cita);
 
-        // ✅ GUARDAR
-        Cita citaGuardada = citaRepository.save(cita);
+		emailService.enviarCorreoPorEstado(citaGuardada);
 
-        // 🔥 EMAIL CONFIRMACIÓN
-        emailService.enviarCorreoConfirmacion(citaGuardada);
+		return citaGuardada;
+	}
 
-        return citaGuardada;
-    }
+	public void cancelarCita(Long id) {
 
-    /* ===============================
-       CANCELAR CITA
-    =============================== */
-    public void cancelarCita(Long id) {
-        Cita cita = citaRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
+		Cita cita = citaRepository.findById(id).orElseThrow(() -> new RuntimeException("Cita no encontrada"));
 
-        cita.setEstado(EstadoCita.CANCELADA);
-        citaRepository.save(cita);
+		cita.setEstado(EstadoCita.CANCELADA);
+		citaRepository.save(cita);
 
-        emailService.enviarCorreoCancelacion(cita);
-    }
+		emailService.enviarCorreoPorEstado(cita);
+	}
 
-    public Cita cambiarEstado(Long id, EstadoCita estado) {
-        Cita cita = citaRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
+	public Cita cambiarEstado(Long id, EstadoCita estado) {
 
-        cita.setEstado(estado);
-        return citaRepository.save(cita);
-    }
+		Cita cita = citaRepository.findById(id).orElseThrow(() -> new RuntimeException("Cita no encontrada"));
 
-    /* ===============================
-       LISTAR TODAS
-    =============================== */
-    public List<Cita> obtenerTodas() {
-        return citaRepository.findAll();
-    }
-    public Cita reagendarCita(Long id, String nuevaFechaHora) {
-        Cita cita = citaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
+		if (cita.getEstado() == estado) {
+			return cita;
+		}
 
-        cita.setFechaHora(LocalDateTime.parse(nuevaFechaHora));
-        cita.setEstado(EstadoCita.REAGENDADA);
+		cita.setEstado(estado);
+		Cita guardada = citaRepository.save(cita);
 
-        return citaRepository.save(cita);
-    }
+		emailService.enviarCorreoPorEstado(guardada);
+		return guardada;
+	}
 
-    /* ===============================
-       HISTORIAL POR USUARIO
-    =============================== */
-    public List<Cita> obtenerCitasPorUsuario(Long usuarioId) {
-        return citaRepository.findByUsuario_IdOrderByFechaHoraDesc(usuarioId);
-    }
+	public List<Cita> obtenerTodas() {
+		return citaRepository.findAll();
+	}
 
-    /* ===============================
-       HORARIOS DISPONIBLES
-    =============================== */
-    public List<HorarioDTO> obtenerHorariosDisponibles(LocalDate fecha) {
+	public Cita reagendarCita(Long id, String nuevaFechaHora) {
 
-        if (calendarioService.esDiaCerrado(fecha)) {
-            return List.of();
-        }
+		Cita cita = citaRepository.findById(id).orElseThrow(() -> new RuntimeException("Cita no encontrada"));
 
-        List<Cita> citas = citaRepository.findByFechaHoraBetween(
-                fecha.atTime(8, 0),
-                fecha.atTime(20, 0)
-        );
+		cita.setFechaHora(LocalDateTime.parse(nuevaFechaHora));
+		cita.setEstado(EstadoCita.REAGENDADA);
 
-        List<HorarioDTO> resultado = new ArrayList<>();
+		Cita guardada = citaRepository.save(cita);
 
-        for (int h = 8; h <= 20; h++) {
-            LocalTime hora = LocalTime.of(h, 0);
+		emailService.enviarCorreoPorEstado(guardada);
 
-            long count = citas.stream()
-                    .filter(c -> c.getFechaHora().toLocalTime().equals(hora))
-                    .count();
+		return guardada;
+	}
 
-            boolean disponible = count < 2;
+	public List<Cita> obtenerCitasPorUsuario(Long usuarioId) {
+		return citaRepository.findByUsuario_IdOrderByFechaHoraDesc(usuarioId);
+	}
 
-            resultado.add(new HorarioDTO(
-                    hora.toString().substring(0, 5),
-                    disponible
-            ));
-        }
+	public List<HorarioDTO> obtenerHorariosDisponibles(LocalDate fecha) {
 
-        return resultado;
-    }
+		if (calendarioService.esDiaCerrado(fecha)) {
+			return List.of();
+		}
 
-    /* ===============================
-       DÍAS SATURADOS
-    =============================== */
-    public List<LocalDate> obtenerDiasSaturados() {
+		List<Cita> citas = citaRepository.findByFechaHoraBetween(fecha.atTime(8, 0), fecha.atTime(20, 0));
 
-        Map<LocalDate, Long> conteo = citaRepository.findAll().stream()
-                .collect(Collectors.groupingBy(
-                        c -> c.getFechaHora().toLocalDate(),
-                        Collectors.counting()
-                ));
+		List<HorarioDTO> resultado = new ArrayList<>();
 
-        int maxPorDia = (20 - 8 + 1) * 2;
+		for (int h = 8; h <= 20; h++) {
+			LocalTime hora = LocalTime.of(h, 0);
 
-        return conteo.entrySet().stream()
-                .filter(e -> e.getValue() >= maxPorDia)
-                .map(Map.Entry::getKey)
-                .toList();
-    }
+			long count = citas.stream().filter(c -> c.getFechaHora().toLocalTime().equals(hora)).count();
+
+			boolean disponible = count < 2;
+
+			resultado.add(new HorarioDTO(hora.toString().substring(0, 5), disponible));
+		}
+
+		return resultado;
+	}
+
+	public List<LocalDate> obtenerDiasSaturados() {
+
+		Map<LocalDate, Long> conteo = citaRepository.findAll().stream()
+				.collect(Collectors.groupingBy(c -> c.getFechaHora().toLocalDate(), Collectors.counting()));
+
+		int maxPorDia = (20 - 8 + 1) * 2;
+
+		return conteo.entrySet().stream().filter(e -> e.getValue() >= maxPorDia).map(Map.Entry::getKey).toList();
+	}
 }

@@ -11,29 +11,24 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin
 public class UsuarioController {
 
-    private final UsuarioRepository usuarioRepo;
-    private final JwtService jwtService;
+	private final UsuarioRepository usuarioRepo;
+	private final JwtService jwtService;
 
-    public UsuarioController(UsuarioRepository usuarioRepo, JwtService jwtService) {
-        this.usuarioRepo = usuarioRepo;
-        this.jwtService = jwtService;
-    }
+	public UsuarioController(UsuarioRepository usuarioRepo, JwtService jwtService) {
+		this.usuarioRepo = usuarioRepo;
+		this.jwtService = jwtService;
+	}
 
-    @PutMapping("/perfil/{id}")
-    public String actualizarPerfil(
-            @PathVariable Long id,
-            @RequestBody PerfilUpdateRequest req
-    ) {
-        Usuario u = usuarioRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+	@PutMapping("/perfil/{id}")
+	public String actualizarPerfil(@PathVariable Long id, @RequestBody PerfilUpdateRequest req) {
+		Usuario u = usuarioRepo.findById(id).orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        u.setNombre(req.nombre);
-        u.setApellidos(req.apellidos);
-        u.setTelefono(req.telefono);
+		u.setNombre(req.nombre);
+		u.setApellidos(req.apellidos);
+		u.setTelefono(req.telefono);
 
-        usuarioRepo.save(u);
+		usuarioRepo.save(u);
 
-        // 🔥 JWT nuevo con datos actualizados
-        return jwtService.generarToken(u);
-    }
+		return jwtService.generarToken(u);
+	}
 }

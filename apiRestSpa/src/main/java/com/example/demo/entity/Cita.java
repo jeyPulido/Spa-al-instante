@@ -11,36 +11,32 @@ import java.util.List;
 @Data
 public class Cita {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    @Column(name = "nombre_cliente")
-    private String nombreCliente;
+	@Column(name = "nombre_cliente")
+	private String nombreCliente;
 
-    @Column(name = "apellidos_cliente")
-    private String apellidosCliente;
+	@Column(name = "apellidos_cliente")
+	private String apellidosCliente;
 
-    private String correo;
-    @ManyToOne
-    @JoinColumn(name = "usuario_id")
-    private Usuario usuario;
+	private String correo;
+	@ManyToOne
+	@JoinColumn(name = "usuario_id")
+	private Usuario usuario;
 
-    private String telefono;
+	private String telefono;
 
-    @Column(name = "fecha_hora")
-    private LocalDateTime fechaHora;
+	@Column(name = "fecha_hora")
+	private LocalDateTime fechaHora;
 
-    @ManyToMany
-    @JoinTable(
-        name = "cita_servicios",
-        joinColumns = @JoinColumn(name = "cita_id"),
-        inverseJoinColumns = @JoinColumn(name = "servicio_id")
-    )
-    private List<Servicio> servicios = new ArrayList<>();
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private EstadoCita estado = EstadoCita.PENDIENTE;
+	@ManyToMany
+	@JoinTable(name = "cita_servicios", joinColumns = @JoinColumn(name = "cita_id"), inverseJoinColumns = @JoinColumn(name = "servicio_id"))
+	private List<Servicio> servicios = new ArrayList<>();
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false)
+	private EstadoCita estado = EstadoCita.PENDIENTE;
 
 	public Long getId() {
 		return id;
@@ -90,8 +86,6 @@ public class Cita {
 		this.fechaHora = fechaHora;
 	}
 
-
-
 	public List<Servicio> getServicios() {
 		return servicios;
 	}
@@ -115,6 +109,5 @@ public class Cita {
 	public void setEstado(EstadoCita estado) {
 		this.estado = estado;
 	}
-    
-    
+
 }

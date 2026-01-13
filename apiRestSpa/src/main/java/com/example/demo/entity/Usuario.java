@@ -8,23 +8,23 @@ import lombok.Data;
 @Data
 public class Usuario {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    private String nombre;
+	private String nombre;
 
-    private String apellidos;
+	private String apellidos;
 
-    @Column(unique = true)
-    private String correo;
+	@Column(unique = true)
+	private String correo;
 
-    private String telefono;
+	private String telefono;
 
-    private String password;
+	private String password;
 
-    @Enumerated(EnumType.STRING)
-    private Rol rol;
+	@Enumerated(EnumType.STRING)
+	private Rol rol;
 
 	public Long getId() {
 		return id;
@@ -81,5 +81,5 @@ public class Usuario {
 	public void setRol(Rol rol) {
 		this.rol = rol;
 	}
-    
+
 }

@@ -1,16 +1,12 @@
 <template>
   <q-page class="q-pa-lg bg-grey-2">
-    <!-- HEADER -->
     <q-card class="q-pa-md q-mb-lg bg-primary text-white">
-      <div class="row items-center justify-between">
-        <div class="row items-center">
-          <q-icon name="spa" size="36px" />
-          <div class="text-h5 text-weight-bold q-ml-sm">Administración de Servicios</div>
-        </div>
+      <div class="row items-center">
+        <q-icon name="spa" size="36px" />
+        <div class="text-h5 text-weight-bold q-ml-sm">Administración de Servicios</div>
       </div>
     </q-card>
 
-    <!-- FORMULARIO -->
     <q-card class="q-pa-lg q-mb-lg">
       <div class="row items-center q-mb-md">
         <q-icon :name="editando ? 'edit' : 'add_circle'" size="28px" color="primary" />
@@ -71,7 +67,6 @@
       </q-form>
     </q-card>
 
-    <!-- LISTA DE SERVICIOS -->
     <q-card class="q-pa-md">
       <div class="row items-center q-mb-md">
         <q-icon name="list_alt" size="28px" color="primary" />
@@ -79,13 +74,13 @@
       </div>
 
       <q-list bordered separator v-if="servicios.length">
-        <q-item v-for="s in servicios" :key="s.id" clickable>
+        <q-item v-for="s in servicios" :key="s.id">
           <q-item-section>
             <q-item-label class="text-weight-bold text-primary">
               {{ s.nombre }}
             </q-item-label>
 
-            <q-item-label caption class="q-mt-xs">
+            <q-item-label caption>
               {{ s.descripcion || 'Sin descripción' }}
             </q-item-label>
 
@@ -107,6 +102,7 @@
     </q-card>
   </q-page>
 </template>
+
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
@@ -124,26 +120,57 @@ const form = ref({
   precio: null,
 })
 
-/* ================= API ================= */
 async function cargarServicios() {
-  const res = await axios.get('http://localhost:8082/api/servicios')
-  servicios.value = res.data
+  $q.loading.show({ message: 'Cargando servicios, por favor espera...' })
+  try {
+    const res = await axios.get('http://localhost:8082/api/servicios')
+    servicios.value = res.data
+
+    $q.notify({
+      type: 'positive',
+      message: 'Servicios cargados correctamente',
+      position: 'top',
+    })
+  } catch {
+    $q.notify({
+      type: 'negative',
+      message: 'Error al cargar servicios',
+      position: 'top',
+    })
+  } finally {
+    $q.loading.hide()
+  }
 }
 
 async function guardarServicio() {
+  $q.loading.show({ message: 'Guardando servicio...' })
   try {
     if (editando.value) {
       await axios.put(`http://localhost:8082/api/servicios/${form.value.id}`, form.value)
-      $q.notify({ type: 'positive', message: 'Servicio actualizado correctamente' })
+      $q.notify({
+        type: 'positive',
+        message: 'Servicio actualizado correctamente',
+        icon: 'check_circle',
+      })
     } else {
       await axios.post('http://localhost:8082/api/servicios', form.value)
-      $q.notify({ type: 'positive', message: 'Servicio registrado correctamente' })
+      $q.notify({
+        type: 'positive',
+        message: 'Servicio registrado correctamente',
+        icon: 'check_circle',
+      })
     }
 
     resetForm()
     cargarServicios()
   } catch {
-    $q.notify({ type: 'negative', message: 'Error al guardar servicio' })
+    $q.notify({
+      type: 'negative',
+      message: 'Error al guardar el servicio',
+      icon: 'error',
+    })
+  } finally {
+    $q.loading.hide()
   }
 }
 
@@ -153,7 +180,8 @@ function editarServicio(servicio) {
 
   $q.notify({
     type: 'info',
-    message: 'Editando servicio',
+    message: 'Modo edición activado',
+    icon: 'edit',
   })
 }
 
@@ -164,9 +192,24 @@ async function eliminarServicio(id) {
     cancel: true,
     persistent: true,
   }).onOk(async () => {
-    await axios.delete(`http://localhost:8082/api/servicios/${id}`)
-    $q.notify({ type: 'info', message: 'Servicio eliminado' })
-    cargarServicios()
+    $q.loading.show({ message: 'Eliminando servicio...' })
+    try {
+      await axios.delete(`http://localhost:8082/api/servicios/${id}`)
+      $q.notify({
+        type: 'warning',
+        message: 'Servicio eliminado',
+        icon: 'delete',
+      })
+      cargarServicios()
+    } catch {
+      $q.notify({
+        type: 'negative',
+        message: 'No se pudo eliminar el servicio',
+        icon: 'error',
+      })
+    } finally {
+      $q.loading.hide()
+    }
   })
 }
 
@@ -180,7 +223,6 @@ function resetForm() {
   editando.value = false
 }
 
-/* ================= HELPERS ================= */
 function formatoPrecio(precio) {
   return `$${Number(precio).toLocaleString('es-MX')} MXN`
 }

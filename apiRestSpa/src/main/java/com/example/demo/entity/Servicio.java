@@ -8,15 +8,15 @@ import lombok.Data;
 @Data
 public class Servicio {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-    private String nombre;
+	private String nombre;
 
-    private String descripcion;
+	private String descripcion;
 
-    private Double precio;
+	private Double precio;
 
 	public Long getId() {
 		return id;
@@ -49,6 +49,5 @@ public class Servicio {
 	public void setPrecio(Double precio) {
 		this.precio = precio;
 	}
-    
-    
+
 }
